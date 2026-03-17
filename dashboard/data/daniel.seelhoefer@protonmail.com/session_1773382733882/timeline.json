@@ -1,0 +1,74 @@
+{
+  "userId": "daniel.seelhoefer@protonmail.com",
+  "sessionId": "session_1773382733882",
+  "timestamp": 1773382733882,
+  "reviewStats": {
+    "max": 100,
+    "avg": 100,
+    "duration": 11,
+    "avgBpm": 0,
+    "avgRmssd": 0
+  },
+  "timeline": [
+    {
+      "timeOffset": 0,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 2,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 3,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 5,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 6,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 7,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 8,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 9,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 10,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 11,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    }
+  ]
+}

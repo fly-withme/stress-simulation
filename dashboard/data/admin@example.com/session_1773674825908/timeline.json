@@ -1,0 +1,943 @@
+{
+  "userId": "admin@example.com",
+  "sessionId": "session_1773674825908",
+  "timestamp": 1773674825908,
+  "reviewStats": {
+    "max": 0,
+    "avg": 0,
+    "duration": 153,
+    "avgBpm": 65.63636363636364,
+    "avgRmssd": 60.06233766233766,
+    "nBackStats": {
+      "hits": 1,
+      "misses": 1,
+      "falseAlarms": 0
+    }
+  },
+  "timeline": [
+    {
+      "timeOffset": 0,
+      "bpm": 62,
+      "rmssd": 57.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 1,
+      "bpm": 62,
+      "rmssd": 57.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 2,
+      "bpm": 61,
+      "rmssd": 57.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 3,
+      "bpm": 61,
+      "rmssd": 57.5,
+      "workload": 0
+    },
+    {
+      "timeOffset": 4,
+      "bpm": 61,
+      "rmssd": 56.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 5,
+      "bpm": 61,
+      "rmssd": 56.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 6,
+      "bpm": 60,
+      "rmssd": 58.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 7,
+      "bpm": 60,
+      "rmssd": 58,
+      "workload": 0
+    },
+    {
+      "timeOffset": 8,
+      "bpm": 61,
+      "rmssd": 58,
+      "workload": 0
+    },
+    {
+      "timeOffset": 9,
+      "bpm": 61,
+      "rmssd": 58.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 10,
+      "bpm": 61,
+      "rmssd": 59.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 11,
+      "bpm": 61,
+      "rmssd": 58.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 12,
+      "bpm": 62,
+      "rmssd": 58.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 13,
+      "bpm": 63,
+      "rmssd": 58.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 14,
+      "bpm": 63,
+      "rmssd": 58.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 15,
+      "bpm": 62,
+      "rmssd": 58.5,
+      "workload": 0
+    },
+    {
+      "timeOffset": 16,
+      "bpm": 62,
+      "rmssd": 57.5,
+      "workload": 0
+    },
+    {
+      "timeOffset": 17,
+      "bpm": 62,
+      "rmssd": 57.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 18,
+      "bpm": 62,
+      "rmssd": 57.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 19,
+      "bpm": 63,
+      "rmssd": 57.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 20,
+      "bpm": 63,
+      "rmssd": 57.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 21,
+      "bpm": 63,
+      "rmssd": 58.5,
+      "workload": 0
+    },
+    {
+      "timeOffset": 22,
+      "bpm": 64,
+      "rmssd": 58.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 23,
+      "bpm": 64,
+      "rmssd": 58.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 24,
+      "bpm": 63,
+      "rmssd": 58.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 25,
+      "bpm": 63,
+      "rmssd": 58.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 26,
+      "bpm": 63,
+      "rmssd": 58.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 27,
+      "bpm": 62,
+      "rmssd": 58.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 28,
+      "bpm": 62,
+      "rmssd": 59.5,
+      "workload": 0
+    },
+    {
+      "timeOffset": 29,
+      "bpm": 64,
+      "rmssd": 59.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 30,
+      "bpm": 64,
+      "rmssd": 59.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 31,
+      "bpm": 64,
+      "rmssd": 60.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 32,
+      "bpm": 64,
+      "rmssd": 60.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 33,
+      "bpm": 64,
+      "rmssd": 60.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 34,
+      "bpm": 64,
+      "rmssd": 59.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 35,
+      "bpm": 65,
+      "rmssd": 59.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 36,
+      "bpm": 65,
+      "rmssd": 59.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 37,
+      "bpm": 66,
+      "rmssd": 61,
+      "workload": 0
+    },
+    {
+      "timeOffset": 38,
+      "bpm": 66,
+      "rmssd": 61,
+      "workload": 0
+    },
+    {
+      "timeOffset": 39,
+      "bpm": 66,
+      "rmssd": 61,
+      "workload": 0
+    },
+    {
+      "timeOffset": 40,
+      "bpm": 66,
+      "rmssd": 63.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 41,
+      "bpm": 67,
+      "rmssd": 63.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 42,
+      "bpm": 67,
+      "rmssd": 65.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 43,
+      "bpm": 68,
+      "rmssd": 65.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 44,
+      "bpm": 69,
+      "rmssd": 65.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 45,
+      "bpm": 70,
+      "rmssd": 66.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 46,
+      "bpm": 71,
+      "rmssd": 66.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 47,
+      "bpm": 70,
+      "rmssd": 65.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 48,
+      "bpm": 69,
+      "rmssd": 65.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 49,
+      "bpm": 69,
+      "rmssd": 66.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 50,
+      "bpm": 68,
+      "rmssd": 65.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 51,
+      "bpm": 67,
+      "rmssd": 66,
+      "workload": 0
+    },
+    {
+      "timeOffset": 52,
+      "bpm": 67,
+      "rmssd": 66,
+      "workload": 0
+    },
+    {
+      "timeOffset": 53,
+      "bpm": 66,
+      "rmssd": 66.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 54,
+      "bpm": 66,
+      "rmssd": 65.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 55,
+      "bpm": 65,
+      "rmssd": 65.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 56,
+      "bpm": 63,
+      "rmssd": 65.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 57,
+      "bpm": 62,
+      "rmssd": 65.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 58,
+      "bpm": 62,
+      "rmssd": 65.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 59,
+      "bpm": 62,
+      "rmssd": 64.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 60,
+      "bpm": 61,
+      "rmssd": 64.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 61,
+      "bpm": 61,
+      "rmssd": 64.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 62,
+      "bpm": 61,
+      "rmssd": 64.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 63,
+      "bpm": 61,
+      "rmssd": 64.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 64,
+      "bpm": 60,
+      "rmssd": 64.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 65,
+      "bpm": 60,
+      "rmssd": 64.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 66,
+      "bpm": 60,
+      "rmssd": 64.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 67,
+      "bpm": 60,
+      "rmssd": 64.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 68,
+      "bpm": 60,
+      "rmssd": 65.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 69,
+      "bpm": 60,
+      "rmssd": 66.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 70,
+      "bpm": 60,
+      "rmssd": 66.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 71,
+      "bpm": 60,
+      "rmssd": 66.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 72,
+      "bpm": 60,
+      "rmssd": 66.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 73,
+      "bpm": 60,
+      "rmssd": 66.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 74,
+      "bpm": 59,
+      "rmssd": 66.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 75,
+      "bpm": 59,
+      "rmssd": 66.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 76,
+      "bpm": 58,
+      "rmssd": 66.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 77,
+      "bpm": 58,
+      "rmssd": 66.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 78,
+      "bpm": 59,
+      "rmssd": 66.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 79,
+      "bpm": 59,
+      "rmssd": 66.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 80,
+      "bpm": 59,
+      "rmssd": 66.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 81,
+      "bpm": 58,
+      "rmssd": 67.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 82,
+      "bpm": 58,
+      "rmssd": 67.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 83,
+      "bpm": 58,
+      "rmssd": 67.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 84,
+      "bpm": 58,
+      "rmssd": 67.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 85,
+      "bpm": 58,
+      "rmssd": 67.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 86,
+      "bpm": 57,
+      "rmssd": 67.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 87,
+      "bpm": 57,
+      "rmssd": 67.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 88,
+      "bpm": 57,
+      "rmssd": 67.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 89,
+      "bpm": 57,
+      "rmssd": 66.5,
+      "workload": 0
+    },
+    {
+      "timeOffset": 90,
+      "bpm": 58,
+      "rmssd": 66.5,
+      "workload": 0
+    },
+    {
+      "timeOffset": 91,
+      "bpm": 58,
+      "rmssd": 66.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 92,
+      "bpm": 58,
+      "rmssd": 67.5,
+      "workload": 0
+    },
+    {
+      "timeOffset": 93,
+      "bpm": 59,
+      "rmssd": 68.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 94,
+      "bpm": 60,
+      "rmssd": 66.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 95,
+      "bpm": 60,
+      "rmssd": 66.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 96,
+      "bpm": 60,
+      "rmssd": 65.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 97,
+      "bpm": 60,
+      "rmssd": 66.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 98,
+      "bpm": 60,
+      "rmssd": 65.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 99,
+      "bpm": 60,
+      "rmssd": 65.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 100,
+      "bpm": 60,
+      "rmssd": 65.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 101,
+      "bpm": 60,
+      "rmssd": 65.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 102,
+      "bpm": 60,
+      "rmssd": 65.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 103,
+      "bpm": 60,
+      "rmssd": 65.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 104,
+      "bpm": 60,
+      "rmssd": 65.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 105,
+      "bpm": 61,
+      "rmssd": 64.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 106,
+      "bpm": 61,
+      "rmssd": 65.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 107,
+      "bpm": 61,
+      "rmssd": 64,
+      "workload": 0
+    },
+    {
+      "timeOffset": 108,
+      "bpm": 62,
+      "rmssd": 64,
+      "workload": 0
+    },
+    {
+      "timeOffset": 109,
+      "bpm": 64,
+      "rmssd": 61.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 110,
+      "bpm": 66,
+      "rmssd": 61.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 111,
+      "bpm": 68,
+      "rmssd": 61.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 112,
+      "bpm": 74,
+      "rmssd": 60.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 113,
+      "bpm": 75,
+      "rmssd": 60,
+      "workload": 0
+    },
+    {
+      "timeOffset": 114,
+      "bpm": 77,
+      "rmssd": 59.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 115,
+      "bpm": 78,
+      "rmssd": 59.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 116,
+      "bpm": 79,
+      "rmssd": 59.5,
+      "workload": 0
+    },
+    {
+      "timeOffset": 117,
+      "bpm": 79,
+      "rmssd": 58.5,
+      "workload": 0
+    },
+    {
+      "timeOffset": 118,
+      "bpm": 79,
+      "rmssd": 57.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 119,
+      "bpm": 80,
+      "rmssd": 57.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 120,
+      "bpm": 80,
+      "rmssd": 57.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 121,
+      "bpm": 81,
+      "rmssd": 56.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 122,
+      "bpm": 82,
+      "rmssd": 56.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 123,
+      "bpm": 82,
+      "rmssd": 55.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 124,
+      "bpm": 84,
+      "rmssd": 55.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 125,
+      "bpm": 84,
+      "rmssd": 55.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 126,
+      "bpm": 83,
+      "rmssd": 51,
+      "workload": 0
+    },
+    {
+      "timeOffset": 127,
+      "bpm": 83,
+      "rmssd": 47.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 128,
+      "bpm": 83,
+      "rmssd": 47.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 129,
+      "bpm": 84,
+      "rmssd": 48.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 130,
+      "bpm": 84,
+      "rmssd": 51.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 131,
+      "bpm": 82,
+      "rmssd": 50.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 132,
+      "bpm": 77,
+      "rmssd": 50.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 133,
+      "bpm": 75,
+      "rmssd": 50.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 134,
+      "bpm": 74,
+      "rmssd": 49.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 135,
+      "bpm": 74,
+      "rmssd": 50,
+      "workload": 0
+    },
+    {
+      "timeOffset": 136,
+      "bpm": 73,
+      "rmssd": 49.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 137,
+      "bpm": 72,
+      "rmssd": 49.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 138,
+      "bpm": 71,
+      "rmssd": 49.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 139,
+      "bpm": 71,
+      "rmssd": 49.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 140,
+      "bpm": 70,
+      "rmssd": 48.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 141,
+      "bpm": 69,
+      "rmssd": 48.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 142,
+      "bpm": 69,
+      "rmssd": 48.5,
+      "workload": 0
+    },
+    {
+      "timeOffset": 143,
+      "bpm": 68,
+      "rmssd": 48.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 144,
+      "bpm": 69,
+      "rmssd": 48.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 145,
+      "bpm": 68,
+      "rmssd": 48,
+      "workload": 0
+    },
+    {
+      "timeOffset": 146,
+      "bpm": 68,
+      "rmssd": 47.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 147,
+      "bpm": 68,
+      "rmssd": 47.9,
+      "workload": 0
+    },
+    {
+      "timeOffset": 148,
+      "bpm": 68,
+      "rmssd": 48.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 149,
+      "bpm": 67,
+      "rmssd": 47.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 150,
+      "bpm": 67,
+      "rmssd": 46.5,
+      "workload": 0
+    },
+    {
+      "timeOffset": 151,
+      "bpm": 67,
+      "rmssd": 46.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 152,
+      "bpm": 68,
+      "rmssd": 45.5,
+      "workload": 0
+    },
+    {
+      "timeOffset": 153,
+      "bpm": 69,
+      "rmssd": 45.3,
+      "workload": 0
+    }
+  ]
+}

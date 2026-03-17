@@ -1,0 +1,90 @@
+{
+  "userId": "daniel.seelhofer@protonmail.com",
+  "sessionId": "session_1773347884152",
+  "timestamp": 1773347884152,
+  "reviewStats": {
+    "max": 7.732161080147587,
+    "avg": 5.275743175107339,
+    "duration": 12
+  },
+  "timeline": [
+    {
+      "timeOffset": 0,
+      "bpm": 61,
+      "rmssd": 66.4,
+      "workload": 6.177878954392021
+    },
+    {
+      "timeOffset": 1,
+      "bpm": 61,
+      "rmssd": 68,
+      "workload": 3.917104953293042
+    },
+    {
+      "timeOffset": 2,
+      "bpm": 61,
+      "rmssd": 68.1,
+      "workload": 3.7758065782243633
+    },
+    {
+      "timeOffset": 3,
+      "bpm": 62,
+      "rmssd": 67.6,
+      "workload": 4.482298453567797
+    },
+    {
+      "timeOffset": 4,
+      "bpm": 62,
+      "rmssd": 68,
+      "workload": 3.917104953293042
+    },
+    {
+      "timeOffset": 5,
+      "bpm": 62,
+      "rmssd": 68.1,
+      "workload": 3.7758065782243633
+    },
+    {
+      "timeOffset": 6,
+      "bpm": 62,
+      "rmssd": 67.4,
+      "workload": 4.764895203705154
+    },
+    {
+      "timeOffset": 7,
+      "bpm": 63,
+      "rmssd": 67,
+      "workload": 5.330088703979909
+    },
+    {
+      "timeOffset": 8,
+      "bpm": 63,
+      "rmssd": 67,
+      "workload": 5.330088703979909
+    },
+    {
+      "timeOffset": 9,
+      "bpm": 64,
+      "rmssd": 66.6,
+      "workload": 5.895282204254664
+    },
+    {
+      "timeOffset": 10,
+      "bpm": 64,
+      "rmssd": 66.2,
+      "workload": 6.460475704529399
+    },
+    {
+      "timeOffset": 11,
+      "bpm": 64,
+      "rmssd": 65.8,
+      "workload": 7.025669204804154
+    },
+    {
+      "timeOffset": 12,
+      "bpm": 64,
+      "rmssd": 65.3,
+      "workload": 7.732161080147587
+    }
+  ]
+}

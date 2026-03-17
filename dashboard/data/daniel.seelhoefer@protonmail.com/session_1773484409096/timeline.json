@@ -1,0 +1,302 @@
+{
+  "userId": "daniel.seelhoefer@protonmail.com",
+  "sessionId": "session_1773484409096",
+  "timestamp": 1773484409096,
+  "reviewStats": {
+    "max": 100,
+    "avg": 100,
+    "duration": 47,
+    "avgBpm": 25.875,
+    "avgRmssd": 0
+  },
+  "timeline": [
+    {
+      "timeOffset": 0,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 1,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 2,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 3,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 4,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 5,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 6,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 7,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 8,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 9,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 10,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 11,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 12,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 13,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 14,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 15,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 16,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 17,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 18,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 19,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 20,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 21,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 22,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 23,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 24,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 25,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 26,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 27,
+      "bpm": 69,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 28,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 29,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 30,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 31,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 32,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 33,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 34,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 35,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 36,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 37,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 38,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 39,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 40,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 41,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 42,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 43,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 44,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 45,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 46,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    },
+    {
+      "timeOffset": 47,
+      "bpm": 0,
+      "rmssd": 0,
+      "workload": 100
+    }
+  ]
+}

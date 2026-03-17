@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-primary: #3B98B4;
+  --color-primary-hover: #31829c;
+  --color-primary-light: rgba(59, 152, 180, 0.2);
+
+  /* Custom "slate" palette tinted with the primary color, optimized for high contrast */
+  --color-slate-50: #ffffff;
+  --color-slate-100: #f0f7f9;
+  --color-slate-200: #e0eff5;
+  --color-slate-300: #b8dbe8;
+  --color-slate-400: #8abfd4;
+  --color-slate-500: #5ea1bc;
+  --color-slate-600: #3f7b96;
+  --color-slate-700: #29556a;
+  --color-slate-800: #1a3341;
+  --color-slate-900: #0a141b;
+  --color-slate-950: #04080b;
+}
+
+@layer utilities {
+  .pulse-bg {
+    animation: pulse-bg 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes pulse-bg {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@layer utilities {
+  .animate-breathe {
+    animation: breathe 8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+}
+
+@keyframes breathe {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(59, 152, 180, 0.2);
+  }
+  50% {
+    transform: scale(1.6);
+    box-shadow: 0 0 80px rgba(59, 152, 180, 0.6);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(59, 152, 180, 0.2);
+  }
+}
+
+/* Remove focus outline on recharts components */
+.recharts-wrapper *:focus {
+  outline: none !important;
+}
+.recharts-surface:focus {
+  outline: none !important;
+}
+.recharts-responsive-container:focus, .recharts-responsive-container *:focus {
+  outline: none !important;
+}

@@ -1,0 +1,132 @@
+{
+  "userId": "daniel.seelhofer@protonmail.com",
+  "sessionId": "session_1773347102235",
+  "timestamp": 1773347102235,
+  "reviewStats": {
+    "max": 0,
+    "avg": 0,
+    "duration": 19
+  },
+  "timeline": [
+    {
+      "timeOffset": 0,
+      "bpm": 65,
+      "rmssd": 62.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 1,
+      "bpm": 65,
+      "rmssd": 62.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 2,
+      "bpm": 66,
+      "rmssd": 61.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 3,
+      "bpm": 66,
+      "rmssd": 62.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 4,
+      "bpm": 65,
+      "rmssd": 64.6,
+      "workload": 0
+    },
+    {
+      "timeOffset": 5,
+      "bpm": 64,
+      "rmssd": 64.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 6,
+      "bpm": 63,
+      "rmssd": 64.1,
+      "workload": 0
+    },
+    {
+      "timeOffset": 7,
+      "bpm": 63,
+      "rmssd": 64.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 8,
+      "bpm": 63,
+      "rmssd": 66.8,
+      "workload": 0
+    },
+    {
+      "timeOffset": 9,
+      "bpm": 63,
+      "rmssd": 67,
+      "workload": 0
+    },
+    {
+      "timeOffset": 10,
+      "bpm": 64,
+      "rmssd": 67.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 11,
+      "bpm": 64,
+      "rmssd": 68.4,
+      "workload": 0
+    },
+    {
+      "timeOffset": 12,
+      "bpm": 64,
+      "rmssd": 69.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 13,
+      "bpm": 64,
+      "rmssd": 69.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 14,
+      "bpm": 64,
+      "rmssd": 69.7,
+      "workload": 0
+    },
+    {
+      "timeOffset": 15,
+      "bpm": 63,
+      "rmssd": 70,
+      "workload": 0
+    },
+    {
+      "timeOffset": 16,
+      "bpm": 63,
+      "rmssd": 70.2,
+      "workload": 0
+    },
+    {
+      "timeOffset": 17,
+      "bpm": 62,
+      "rmssd": 70.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 18,
+      "bpm": 62,
+      "rmssd": 70.3,
+      "workload": 0
+    },
+    {
+      "timeOffset": 19,
+      "bpm": 62,
+      "rmssd": 70.1,
+      "workload": 0
+    }
+  ]
+}

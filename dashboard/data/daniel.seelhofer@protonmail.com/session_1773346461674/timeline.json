@@ -1,0 +1,426 @@
+{
+  "userId": "daniel.seelhofer@protonmail.com",
+  "sessionId": "session_1773346461674",
+  "timestamp": 1773346461674,
+  "reviewStats": {
+    "max": 37.669396333067645,
+    "avg": 34.14572154461943,
+    "duration": 71
+  },
+  "timeline": [
+    {
+      "timeOffset": 0,
+      "bpm": 72,
+      "rmssd": 14.5,
+      "workload": 35.90115225740999
+    },
+    {
+      "timeOffset": 1,
+      "bpm": 72,
+      "rmssd": 14.4,
+      "workload": 36.3432132763244
+    },
+    {
+      "timeOffset": 2,
+      "bpm": 72,
+      "rmssd": 14.6,
+      "workload": 35.459091238495574
+    },
+    {
+      "timeOffset": 3,
+      "bpm": 71,
+      "rmssd": 14.6,
+      "workload": 35.459091238495574
+    },
+    {
+      "timeOffset": 4,
+      "bpm": 71,
+      "rmssd": 14.6,
+      "workload": 35.459091238495574
+    },
+    {
+      "timeOffset": 5,
+      "bpm": 72,
+      "rmssd": 14.6,
+      "workload": 35.459091238495574
+    },
+    {
+      "timeOffset": 6,
+      "bpm": 72,
+      "rmssd": 14.8,
+      "workload": 34.57496920066674
+    },
+    {
+      "timeOffset": 7,
+      "bpm": 71,
+      "rmssd": 14.9,
+      "workload": 34.13290818175233
+    },
+    {
+      "timeOffset": 8,
+      "bpm": 71,
+      "rmssd": 14.9,
+      "workload": 34.13290818175233
+    },
+    {
+      "timeOffset": 9,
+      "bpm": 71,
+      "rmssd": 14.9,
+      "workload": 34.13290818175233
+    },
+    {
+      "timeOffset": 10,
+      "bpm": 71,
+      "rmssd": 14.8,
+      "workload": 34.57496920066674
+    },
+    {
+      "timeOffset": 11,
+      "bpm": 71,
+      "rmssd": 14.9,
+      "workload": 34.13290818175233
+    },
+    {
+      "timeOffset": 12,
+      "bpm": 72,
+      "rmssd": 14.5,
+      "workload": 35.90115225740999
+    },
+    {
+      "timeOffset": 13,
+      "bpm": 72,
+      "rmssd": 14.2,
+      "workload": 37.22733531415323
+    },
+    {
+      "timeOffset": 14,
+      "bpm": 72,
+      "rmssd": 14.3,
+      "workload": 36.785274295238814
+    },
+    {
+      "timeOffset": 15,
+      "bpm": 72,
+      "rmssd": 14.4,
+      "workload": 36.3432132763244
+    },
+    {
+      "timeOffset": 16,
+      "bpm": 72,
+      "rmssd": 14.4,
+      "workload": 36.3432132763244
+    },
+    {
+      "timeOffset": 17,
+      "bpm": 71,
+      "rmssd": 14.4,
+      "workload": 36.3432132763244
+    },
+    {
+      "timeOffset": 18,
+      "bpm": 71,
+      "rmssd": 14.2,
+      "workload": 37.22733531415323
+    },
+    {
+      "timeOffset": 19,
+      "bpm": 72,
+      "rmssd": 14.1,
+      "workload": 37.669396333067645
+    },
+    {
+      "timeOffset": 20,
+      "bpm": 72,
+      "rmssd": 14.6,
+      "workload": 35.459091238495574
+    },
+    {
+      "timeOffset": 21,
+      "bpm": 73,
+      "rmssd": 14.7,
+      "workload": 35.017030219581166
+    },
+    {
+      "timeOffset": 22,
+      "bpm": 73,
+      "rmssd": 14.9,
+      "workload": 34.13290818175233
+    },
+    {
+      "timeOffset": 23,
+      "bpm": 75,
+      "rmssd": 14.9,
+      "workload": 34.13290818175233
+    },
+    {
+      "timeOffset": 25,
+      "bpm": 76,
+      "rmssd": 15,
+      "workload": 33.69084716283792
+    },
+    {
+      "timeOffset": 26,
+      "bpm": 77,
+      "rmssd": 15,
+      "workload": 33.69084716283792
+    },
+    {
+      "timeOffset": 27,
+      "bpm": 79,
+      "rmssd": 14.9,
+      "workload": 34.13290818175233
+    },
+    {
+      "timeOffset": 29,
+      "bpm": 80,
+      "rmssd": 14.9,
+      "workload": 34.13290818175233
+    },
+    {
+      "timeOffset": 30,
+      "bpm": 81,
+      "rmssd": 15,
+      "workload": 33.69084716283792
+    },
+    {
+      "timeOffset": 31,
+      "bpm": 81,
+      "rmssd": 14.9,
+      "workload": 34.13290818175233
+    },
+    {
+      "timeOffset": 32,
+      "bpm": 81,
+      "rmssd": 15,
+      "workload": 33.69084716283792
+    },
+    {
+      "timeOffset": 33,
+      "bpm": 81,
+      "rmssd": 14.9,
+      "workload": 34.13290818175233
+    },
+    {
+      "timeOffset": 34,
+      "bpm": 82,
+      "rmssd": 14.4,
+      "workload": 36.3432132763244
+    },
+    {
+      "timeOffset": 35,
+      "bpm": 81,
+      "rmssd": 14.5,
+      "workload": 35.90115225740999
+    },
+    {
+      "timeOffset": 36,
+      "bpm": 81,
+      "rmssd": 14.8,
+      "workload": 34.57496920066674
+    },
+    {
+      "timeOffset": 37,
+      "bpm": 81,
+      "rmssd": 14.7,
+      "workload": 35.017030219581166
+    },
+    {
+      "timeOffset": 38,
+      "bpm": 80,
+      "rmssd": 14.5,
+      "workload": 35.90115225740999
+    },
+    {
+      "timeOffset": 39,
+      "bpm": 80,
+      "rmssd": 14.7,
+      "workload": 35.017030219581166
+    },
+    {
+      "timeOffset": 40,
+      "bpm": 79,
+      "rmssd": 14.7,
+      "workload": 35.017030219581166
+    },
+    {
+      "timeOffset": 41,
+      "bpm": 79,
+      "rmssd": 14.6,
+      "workload": 35.459091238495574
+    },
+    {
+      "timeOffset": 42,
+      "bpm": 79,
+      "rmssd": 14.6,
+      "workload": 35.459091238495574
+    },
+    {
+      "timeOffset": 43,
+      "bpm": 79,
+      "rmssd": 14.8,
+      "workload": 34.57496920066674
+    },
+    {
+      "timeOffset": 44,
+      "bpm": 79,
+      "rmssd": 14.9,
+      "workload": 34.13290818175233
+    },
+    {
+      "timeOffset": 45,
+      "bpm": 79,
+      "rmssd": 15.1,
+      "workload": 33.24878614392351
+    },
+    {
+      "timeOffset": 46,
+      "bpm": 78,
+      "rmssd": 15.4,
+      "workload": 31.922603087180264
+    },
+    {
+      "timeOffset": 47,
+      "bpm": 77,
+      "rmssd": 15.4,
+      "workload": 31.922603087180264
+    },
+    {
+      "timeOffset": 48,
+      "bpm": 77,
+      "rmssd": 15.7,
+      "workload": 30.596420030437027
+    },
+    {
+      "timeOffset": 49,
+      "bpm": 76,
+      "rmssd": 15.3,
+      "workload": 32.36466410609468
+    },
+    {
+      "timeOffset": 50,
+      "bpm": 75,
+      "rmssd": 14.7,
+      "workload": 35.017030219581166
+    },
+    {
+      "timeOffset": 51,
+      "bpm": 75,
+      "rmssd": 14.8,
+      "workload": 34.57496920066674
+    },
+    {
+      "timeOffset": 52,
+      "bpm": 74,
+      "rmssd": 14.9,
+      "workload": 34.13290818175233
+    },
+    {
+      "timeOffset": 53,
+      "bpm": 74,
+      "rmssd": 14.8,
+      "workload": 34.57496920066674
+    },
+    {
+      "timeOffset": 54,
+      "bpm": 73,
+      "rmssd": 14.8,
+      "workload": 34.57496920066674
+    },
+    {
+      "timeOffset": 55,
+      "bpm": 73,
+      "rmssd": 15.1,
+      "workload": 33.24878614392351
+    },
+    {
+      "timeOffset": 56,
+      "bpm": 73,
+      "rmssd": 15.1,
+      "workload": 33.24878614392351
+    },
+    {
+      "timeOffset": 57,
+      "bpm": 72,
+      "rmssd": 15,
+      "workload": 33.69084716283792
+    },
+    {
+      "timeOffset": 58,
+      "bpm": 72,
+      "rmssd": 15.3,
+      "workload": 32.36466410609468
+    },
+    {
+      "timeOffset": 59,
+      "bpm": 72,
+      "rmssd": 15.3,
+      "workload": 32.36466410609468
+    },
+    {
+      "timeOffset": 60,
+      "bpm": 72,
+      "rmssd": 15,
+      "workload": 33.69084716283792
+    },
+    {
+      "timeOffset": 61,
+      "bpm": 72,
+      "rmssd": 15,
+      "workload": 33.69084716283792
+    },
+    {
+      "timeOffset": 62,
+      "bpm": 71,
+      "rmssd": 15,
+      "workload": 33.69084716283792
+    },
+    {
+      "timeOffset": 63,
+      "bpm": 71,
+      "rmssd": 15.6,
+      "workload": 31.038481049351436
+    },
+    {
+      "timeOffset": 64,
+      "bpm": 72,
+      "rmssd": 15.6,
+      "workload": 31.038481049351436
+    },
+    {
+      "timeOffset": 65,
+      "bpm": 72,
+      "rmssd": 15.6,
+      "workload": 31.038481049351436
+    },
+    {
+      "timeOffset": 66,
+      "bpm": 72,
+      "rmssd": 15.6,
+      "workload": 31.038481049351436
+    },
+    {
+      "timeOffset": 68,
+      "bpm": 72,
+      "rmssd": 15.8,
+      "workload": 30.1543590115226
+    },
+    {
+      "timeOffset": 69,
+      "bpm": 71,
+      "rmssd": 15.7,
+      "workload": 30.596420030437027
+    },
+    {
+      "timeOffset": 70,
+      "bpm": 71,
+      "rmssd": 15.7,
+      "workload": 30.596420030437027
+    },
+    {
+      "timeOffset": 71,
+      "bpm": 70,
+      "rmssd": 15.7,
+      "workload": 30.596420030437027
+    }
+  ]
+}
