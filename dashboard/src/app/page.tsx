@@ -1533,6 +1533,22 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Pupil Size Timeline */}
+          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-5 sm:p-8 mb-4 order-4 relative overflow-hidden flex-1 w-full">
+            <div className="absolute top-0 w-full h-1 bg-linear-to-r from-transparent via-emerald-500 to-transparent opacity-20 -mx-8"></div>
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-200">Percentage Change in Pupil Size</h3>
+                <p className="text-sm text-slate-400 mt-1">
+                  Pupil dilation variance across the session.
+                </p>
+              </div>
+            </div>
+            <div className="h-64 w-full">
+              <div className="h-full flex items-center justify-center text-slate-500">No pupil size data available yet.</div>
+            </div>
+          </div>
+
           {/* Screen Daten / Workload Sync */}
           <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-5 sm:p-8 mb-10 order-1 relative group flex-1 w-full">
             <div className="mb-5">
