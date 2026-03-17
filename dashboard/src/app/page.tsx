@@ -1398,7 +1398,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Delta RMSSD Timeline */}
-          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-5 sm:p-8 mb-4 order-2 relative overflow-hidden flex-1 w-full">
+          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-5 sm:p-8 mb-4 order-3 relative overflow-hidden flex-1 w-full">
             <div className="absolute top-0 w-full h-1 bg-linear-to-r from-transparent via-primary to-transparent opacity-20 -mx-8"></div>
             <div className="mb-5 flex items-center justify-between">
               <div>
@@ -1466,7 +1466,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Cognitive Effort Timeline */}
-          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-5 sm:p-8 mb-4 order-3 relative overflow-hidden flex-1 w-full">
+          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-5 sm:p-8 mb-4 order-2 relative overflow-hidden flex-1 w-full">
             <div className="absolute top-0 w-full h-1 bg-linear-to-r from-transparent via-purple-500 to-transparent opacity-20 -mx-8"></div>
             <div className="mb-5 flex items-center justify-between">
               <div>
