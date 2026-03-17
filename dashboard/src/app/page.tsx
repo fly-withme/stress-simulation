@@ -1658,6 +1658,9 @@ export default function DashboardPage() {
                             const x = (d.timeOffset / duration) * 100;
                             const cognitiveEffort = -(d.rmssd - baselineReference);
                             const y = getSvgY(cognitiveEffort);
+                            
+                            if (i === 0) {
+                              pathD += `M 0 ${y}\nL ${x} ${y}\n`;
                             } else {
                               pathD += `L ${x} ${y}\n`;
                             }
@@ -1678,10 +1681,11 @@ export default function DashboardPage() {
                           });
 
                           if (currentBlock !== null) {
+                            const cb = currentBlock as { startOffset: number };
                             const lastOffset = sessionData[sessionData.length - 1].timeOffset;
                             stressBlocks.push({
-                              left: (currentBlock.startOffset / duration) * 100,
-                              width: ((lastOffset - currentBlock.startOffset) / duration) * 100
+                              left: (cb.startOffset / duration) * 100,
+                              width: ((lastOffset - cb.startOffset) / duration) * 100
                             });
                           }
 
