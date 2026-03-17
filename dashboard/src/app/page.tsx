@@ -1407,10 +1407,6 @@ export default function DashboardPage() {
                   Heart rate variability change across the session.
                 </p>
               </div>
-              <div className="bg-slate-950/50 border border-slate-800 px-4 py-2 rounded-full flex gap-2 items-center tabular-nums">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-slate-300 font-medium">Synced: {formatSeconds(videoTime)}</span>
-              </div>
             </div>
             <div className="h-64 w-full">
               {deltaRmssdTimeline.length > 0 ? (
@@ -1478,10 +1474,6 @@ export default function DashboardPage() {
                 <p className="text-sm text-slate-400 mt-1">
                   Estimated cognitive load derived from Delta RMSSD.
                 </p>
-              </div>
-              <div className="bg-slate-950/50 border border-slate-800 px-4 py-2 rounded-full flex gap-2 items-center tabular-nums">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-slate-300 font-medium">Synced: {formatSeconds(videoTime)}</span>
               </div>
             </div>
             <div className="h-64 w-full">
