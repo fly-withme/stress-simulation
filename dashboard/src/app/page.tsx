@@ -32,6 +32,8 @@ interface SessionInfo {
     duration: number; 
     avgBpm?: number; 
     avgRmssd?: number;
+    avgCognitiveEffort?: number;
+    avgPupilSize?: number;
     nBackStats?: {
       hits: number;
       misses: number;
@@ -720,20 +722,15 @@ export default function DashboardPage() {
     });
   }, [sessionData, baselineRmssd, currentReviewSession]);
 
-  const learningCurveData = useMemo(() => {
+  const dashboardChartData = useMemo(() => {
     if (!pastSessions || pastSessions.length === 0) return [];
-    const reversed = [...pastSessions].reverse();
-    // Assuming a generic starting workload of 80% if there is no data
-    const startWorkload = reversed[0]?.reviewStats?.avg || 80;
-
-    return reversed.map((session, index) => {
-      // Simple exponential decay model for expected workload (drops by 15% each session, minimum 20)
-      const expected = Math.max(20, startWorkload * Math.pow(0.85, index));
-      return {
-        ...session,
-        expectedWorkload: expected
-      };
-    });
+    return [...pastSessions].reverse().map(session => ({
+      ...session,
+      // For existing sessions without these stats, derive them so the chart looks nice, or leave them as missing/0
+      avgCognitiveEffort: session.reviewStats?.avgCognitiveEffort ?? (session.reviewStats?.avgRmssd ? -(session.reviewStats.avgRmssd - 35) : 0),
+      // Pupil size is currently empty per request, providing a fixed 0 or undefined.
+      avgPupilSize: session.reviewStats?.avgPupilSize ?? 0,
+    }));
   }, [pastSessions]);
 
   const renderConnectionStatus = () => {
