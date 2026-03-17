@@ -34,6 +34,17 @@ data_queue: asyncio.Queue = asyncio.Queue()
 # Thread-safe set of connected WebSocket clients
 connected_clients = set()
 
+ble_state = "scanning" # can be "scanning", "connected", "offline"
+ble_rescan_event = asyncio.Event()
+
+async def broadcast_status(state: str):
+    global ble_state
+    ble_state = state
+    payload = {"type": "ble_status", "state": state}
+    message = json.dumps(payload)
+    if connected_clients:
+        websockets.broadcast(connected_clients, message)
+
 # Thread-safe rolling buffer for RR intervals (roughly last 60-80 beats)
 rr_buffer = collections.deque(maxlen=80)
 current_rmssd = 0.0
@@ -61,7 +72,7 @@ def calculate_rmssd(buffer_list: List[int]) -> float:
     """
     Calculates RMSSD (Root Mean Square of Successive Differences) from a list of RR intervals.
     """
-    if len(buffer_list) < 15:
+    if len(buffer_list) < 2:  # Allow calculating immediately on first few beats
         return 0.0
     try:
         arr = np.array(buffer_list)
@@ -103,12 +114,26 @@ async def ws_handler(websocket):
     
     # Add new client to the connected set
     connected_clients.add(websocket)
+    
+    # Send the current BLE connection status immediately upon connection
+    await websocket.send(json.dumps({"type": "ble_status", "state": ble_state}))
+    
     try:
         # Keep the connection open and wait for the client to close it
-        # We don't expect messages from the client in this dashboard use case,
-        # but we iterate to maintain the connection state.
+        # We also listen for 'start' and 'stop' JSON commands to control BLE
         async for message in websocket:
-            pass
+            try:
+                data = json.loads(message)
+                cmd = data.get("command")
+                if cmd == "start":
+                    logger.info("Received START command from dashboard.")
+                elif cmd == "stop":
+                    logger.info("Received STOP command from dashboard.")
+                elif cmd == "rescan":
+                    logger.info("Received RESCAN command from dashboard.")
+                    ble_rescan_event.set()
+            except json.JSONDecodeError:
+                pass
     except websockets.exceptions.ConnectionClosed:
         pass
     except Exception as e:
@@ -206,6 +231,15 @@ def hr_measurement_callback(sender: int, data: bytearray):
                     
                 offset += 2
                 
+        # Calculate RMSSD directly based on the latest buffer (real-time instead of async 1s delay)
+        global current_rmssd
+        if rr_intervals_present and rr_intervals_ms:
+            # We take a snapshot of the current deque
+            snapshot = list(rr_buffer)
+            current_rmssd = round(float(calculate_rmssd(snapshot)), 1)
+            if len(snapshot) >= 2:
+                logger.info(f"Instant RMSSD Updated: {current_rmssd} (Buffer size: {len(snapshot)})")
+
         # Generate absolute Unix timestamp in milliseconds
         timestamp_ms = int(time.time() * 1000)
         
@@ -234,23 +268,34 @@ async def find_polar_device() -> Optional[str]:
     Scans for BLE devices and returns the MAC address of the first device 
     advertising the Heart Rate Service or containing 'Polar' / 'H9' in its name.
     """
-    logger.info("Scanning for Polar/Heart Rate devices...")
-    try:
-        # return_adv=True returns a dict: {address: (BLEDevice, AdvertisementData)}
-        devices_dict = await BleakScanner.discover(timeout=5.0, return_adv=True)
-        
-        for address, (device, adv_data) in devices_dict.items():
-            # Check by service UUIDs in advertisement data
-            if adv_data.service_uuids and HR_SERVICE_UUID in adv_data.service_uuids:
-                name_to_check = device.name or adv_data.local_name or "Unknown"
-                logger.info(f"Found device via UUID: {name_to_check} [{address}]")
-                return address
+    logger.info("Scanning for Polar/Heart Rate devices... (Fast Discovery Mode)")
+    
+    def match_polar(device, adv_data):
+        try:
+            # 1. Check by service UUIDs in advertisement data
+            target_uuid = "0000180d-0000-1000-8000-00805f9b34fb"
+            if adv_data.service_uuids and target_uuid in [str(u).lower() for u in adv_data.service_uuids]:
+                return True
             
-            # Fallback text search just in case UUIDs are hidden
+            # 2. Fallback text search just in case UUIDs are hidden
             name_to_check = device.name or adv_data.local_name or ""
             if "Polar" in name_to_check or "H9" in name_to_check or "H10" in name_to_check:
-                logger.info(f"Found device via Name: {name_to_check} [{address}]")
-                return address
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error in match_polar filter: {e}")
+            
+        return False
+
+    try:
+        # find_device_by_filter returns immediately when a device matches.
+        # We use a 10s timeout since it exits early upon success, avoiding unnecessary connection drops.
+        device = await BleakScanner.find_device_by_filter(match_polar, timeout=10.0)
+        
+        if device:
+            logger.info(f"Found compatible HR device: {device.name} [{device.address}]")
+            return device.address
+            
     except Exception as e:
         logger.error(f"Error during BLE scanning: {e}")
         
@@ -266,33 +311,54 @@ def handle_disconnect(client: BleakClient):
 
 async def ble_client_loop():
     """
-    Manages the BLE connection, including automatic reconnection on disconnect/BleakError.
-    If the script loses connection, it will not crash, but infinitely try to reconnect.
+    Manages the BLE connection. Tries a few times to scan, then waits for a rescan command.
     """
     target_address = None
     
-    while True: # Main auto-reconnect loop
-        try:
-            # Phase 1: Scan if we don't know the address yet
+    while True:
+        scan_attempts = 0
+        max_scan_attempts = 3
+        ble_rescan_event.clear()
+        
+        while not target_address and scan_attempts < max_scan_attempts:
+            await broadcast_status("scanning")
+            target_address = await find_polar_device()
+            
             if not target_address:
-                target_address = await find_polar_device()
-                if not target_address:
-                    logger.warning("No Polar device found. Retrying in 5 seconds...")
-                    await asyncio.sleep(5)
-                    continue
-                    
+                scan_attempts += 1
+                logger.warning(f"No Polar device found. Attempt {scan_attempts}/{max_scan_attempts}.")
+                if scan_attempts < max_scan_attempts:
+                    for _ in range(30):
+                        if ble_rescan_event.is_set():
+                            break
+                        await asyncio.sleep(0.1)
+                
+                if ble_rescan_event.is_set():
+                    logger.info("Rescan event detected during scanning. Resetting attempts.")
+                    scan_attempts = 0
+                    ble_rescan_event.clear()
+        
+        if not target_address:
+            # Reached max attempts
+            await broadcast_status("offline")
+            logger.info("Scanning stopped. Waiting for rescan command...")
+            await ble_rescan_event.wait()
+            continue
+
+        try:
             logger.info(f"Attempting connection to {target_address}...")
             
             # Phase 2: Connect to the device
             async with BleakClient(target_address, disconnected_callback=handle_disconnect) as client:
                 logger.info(f"Connected to {target_address}!")
+                await broadcast_status("connected")
                 
                 # Verify that the expected service exists
-                # In more recent bleak versions, 'services' is a property once connected.
                 hr_service = client.services.get_service(HR_SERVICE_UUID)
                 if not hr_service:
                     logger.error("Device connected, but does not offer the expected Heart Rate Service.")
-                    target_address = None # force rescan, maybe wrong device
+                    target_address = None # force rescan
+                    await broadcast_status("offline")
                     continue
                     
                 # Phase 3: Subscribe to the Characteristic
@@ -301,21 +367,33 @@ async def ble_client_loop():
                 
                 # Keep the loop alive while connected
                 while client.is_connected:
+                    if ble_rescan_event.is_set():
+                        logger.info("Rescan event set. Forcing disconnect from current device...")
+                        break
                     await asyncio.sleep(1)
                     
-                logger.warning("Device is not connected anymore (exited inner loop).")
+                logger.warning("Device disconnected unexpectedly or exited inner loop.")
+                target_address = None
+                await broadcast_status("scanning")
                 
         except BleakError as e:
-            # Log BleakErrors gracefully instead of crashing
             logger.error(f"BLE BleakError occurred: {e}")
+            target_address = None
+            await broadcast_status("scanning")
         except asyncio.TimeoutError:
             logger.error("BLE connection attempt timed out.")
+            target_address = None
+            await broadcast_status("scanning")
         except Exception as e:
             logger.error(f"Unexpected error in BLE loop: {e}", exc_info=True)
+            target_address = None
+            await broadcast_status("scanning")
             
-        # Reconnection cooldown
         logger.info("Reconnecting in 3 seconds...")
-        await asyncio.sleep(3)
+        for _ in range(30):
+            if ble_rescan_event.is_set():
+                break
+            await asyncio.sleep(0.1)
 
 
 async def main():

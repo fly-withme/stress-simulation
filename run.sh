@@ -9,7 +9,11 @@ echo "Starting Stress Simulation System"
 echo "=========================================="
 
 echo "[1/2] Starting Python backend..."
-python3 main.py &
+if [ -d "venv" ]; then
+    ./venv/bin/python main.py &
+else
+    python3 main.py &
+fi
 BACKEND_PID=$!
 
 echo "[2/2] Starting Next.js frontend..."
