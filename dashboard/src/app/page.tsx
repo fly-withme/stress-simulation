@@ -1634,17 +1634,18 @@ export default function DashboardPage() {
                           let minVal = Infinity;
                           let maxVal = -Infinity;
                           sessionData.forEach((d) => {
-                            if (d.rmssd < minVal) minVal = d.rmssd;
-                            if (d.rmssd > maxVal) maxVal = d.rmssd;
+                            const cognitiveEffort = -(d.rmssd - baselineReference);
+                            if (cognitiveEffort < minVal) minVal = cognitiveEffort;
+                            if (cognitiveEffort > maxVal) maxVal = cognitiveEffort;
                           });
 
-                          // Higher stress = lower RMSSD = higher peak in the chart.
                           // Y-axis in SVG goes from 0 (top) to 100 (bottom).
-                          // So minVal -> Y=0, maxVal (lowest stress) -> Y=90 (leave a small base)
-                          const getSvgY = (rmssd: number) => {
+                          // Higher cognitive effort -> closer to top (Y=0).
+                          const getSvgY = (cognitiveEffort: number) => {
                             if (maxVal === minVal) return 50;
-                            const normalized = (rmssd - minVal) / (maxVal - minVal); // 0 (min) to 1 (max)
-                            return normalized * 90; // The smaller RMSSD, the smaller Y (closer to top)
+                            // normalize so that higher effort gives smaller Y
+                            const normalized = (maxVal - cognitiveEffort) / (maxVal - minVal);
+                            return Math.max(0, Math.min(100, normalized * 90)); // The larger cognitive effort, the smaller Y (closer to top)
                           };
 
                           let pathD = ""; // Start path
@@ -1652,13 +1653,11 @@ export default function DashboardPage() {
                           // Compute stress event tags
                           const stressBlocks: { left: number; width: number }[] = [];
                           let currentBlock: { startOffset: number } | null = null;
-
+                          
                           sessionData.forEach((d, i) => {
                             const x = (d.timeOffset / duration) * 100;
-                            const y = getSvgY(d.rmssd);
-                            
-                            if (i === 0) {
-                              pathD += `M 0 ${y}\nL ${x} ${y}\n`;
+                            const cognitiveEffort = -(d.rmssd - baselineReference);
+                            const y = getSvgY(cognitiveEffort);
                             } else {
                               pathD += `L ${x} ${y}\n`;
                             }
@@ -1686,7 +1685,8 @@ export default function DashboardPage() {
                             });
                           }
 
-                          pathD += `L 100 ${getSvgY(sessionData[sessionData.length - 1].rmssd)}\n`; // extend to end
+                          const lastCognitiveEffort = -(sessionData[sessionData.length - 1].rmssd - baselineReference);
+                          pathD += `L 100 ${getSvgY(lastCognitiveEffort)}\n`; // extend to end
 
                           const areaPathD = `${pathD} L 100 100 L 0 100 Z`;
 
@@ -1715,14 +1715,14 @@ export default function DashboardPage() {
                               >
                                 <defs>
                                   <linearGradient id="stressLineGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#b63a4a" />
-                                    <stop offset="50%" stopColor="#c17835" />
-                                    <stop offset="100%" stopColor="#2f855a" />
+                                    <stop offset="0%" stopColor="#a855f7" />
+                                    <stop offset="50%" stopColor="#c084fc" />
+                                    <stop offset="100%" stopColor="#e9d5ff" />
                                   </linearGradient>
                                   <linearGradient id="stressAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#b63a4a" stopOpacity="0.4" />
-                                    <stop offset="50%" stopColor="#c17835" stopOpacity="0.15" />
-                                    <stop offset="100%" stopColor="#2f855a" stopOpacity="0.0" />
+                                    <stop offset="0%" stopColor="#a855f7" stopOpacity="0.4" />
+                                    <stop offset="50%" stopColor="#c084fc" stopOpacity="0.15" />
+                                    <stop offset="100%" stopColor="#e9d5ff" stopOpacity="0.0" />
                                   </linearGradient>
                                 </defs>
                                 <path 
