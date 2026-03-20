@@ -32,13 +32,13 @@ const getSegmentPath = (
 
 const HeartRateMonitor: React.FC<HeartRateMonitorProps> = ({ bpm }) => {
   const segments = [
-    { color: "#166b8d" },
-    { color: "#2598c2" },
-    { color: "#8abdc9" },
-    { color: "#ccc491" },
-    { color: "#edab0d" },
-    { color: "#dc5c17" },
-    { color: "#c63116" },
+    { color: "#dce9f8" },
+    { color: "#c9def7" },
+    { color: "#a8c3ea" },
+    { color: "#7f9ecf" },
+    { color: "#3b579f" },
+    { color: "#203f8a" },
+    { color: "#001864" },
   ];
 
   const totalAngle = 180;
@@ -79,7 +79,7 @@ const HeartRateMonitor: React.FC<HeartRateMonitorProps> = ({ bpm }) => {
                 key={i}
                 d={getSegmentPath(cx, cy, r, R, startAngle, endAngle)}
                 fill={seg.color}
-                stroke="#1e293b" // slate-800 to match background if there's any bleed
+                stroke="#c9def7"
                 strokeWidth="1"
               />
             );
@@ -101,30 +101,30 @@ const HeartRateMonitor: React.FC<HeartRateMonitorProps> = ({ bpm }) => {
             points={`${cx - R + 10},${cy} ${cx + 15},${cy - 4} ${
               cx + 15
             },${cy + 4}`}
-            fill="#3f3f3f"
-            stroke="#222"
+            fill="#001864"
+            stroke="#00124d"
             strokeWidth="1"
           />
           <polygon
             points={`${cx - R + 15},${cy} ${cx + 12},${cy - 1} ${cx + 12},${cy}`}
-            fill="#7a7a7a"
+            fill="#7f9ecf"
           />
         </g>
 
         {/* Pivot Center */}
-        <circle cx={cx} cy={cy} r="10" fill="#2d2d2d" stroke="#111" strokeWidth="2" />
-        <circle cx={cx} cy={cy} r="4" fill="#555" />
+        <circle cx={cx} cy={cy} r="10" fill="#001864" stroke="#00124d" strokeWidth="2" />
+        <circle cx={cx} cy={cy} r="4" fill="#c9def7" />
       </svg>
 
       <div className="absolute bottom-2 flex flex-col items-center justify-center">
         <div className="flex items-baseline gap-1 justify-center">
-          <span className="text-6xl font-normal tracking-tight text-slate-100 mix-blend-screen drop-shadow-md">
+          <span className="text-6xl font-normal tracking-tight text-primary drop-shadow-md">
             {bpm !== null && bpm > 0 ? bpm : "--"}
           </span>
-          <span className="text-xl font-medium text-slate-400 drop-shadow-md ml-1">bpm</span>
+          <span className="text-xl font-medium text-primary/70 drop-shadow-md ml-1">bpm</span>
         </div>
         <div
-          className="text-[14px] font-bold tracking-widest text-slate-300 uppercase -mt-1 text-center"
+          className="text-[14px] font-bold tracking-widest text-primary/80 uppercase -mt-1 text-center"
           style={{ letterSpacing: "0.15em", transform: "scaleY(0.9)" }}
         >
           Heart Rate

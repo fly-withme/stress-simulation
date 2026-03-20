@@ -49,22 +49,30 @@ async def broadcast_status(state: str):
 rr_buffer = collections.deque(maxlen=80)
 current_rmssd = 0.0
 last_valid_rr: Optional[int] = None
+consecutive_rejects: int = 0
 
 
-def is_valid_rr(new_rr: int, last_valid_rr: Optional[int]) -> bool:
+def is_valid_rr(new_rr: int, current_last_rr: Optional[int]) -> bool:
     """
     Validates an RR interval to filter out artifacts and ectopic beats.
     - Absolute limits: Reject < 300ms or > 2000ms.
     - Relative limits: Reject if > 25% change from the previous valid RR.
     """
+    global consecutive_rejects
+    
     if new_rr < 300 or new_rr > 2000:
         return False
         
-    if last_valid_rr is not None:
-        diff_percent = abs(new_rr - last_valid_rr) / last_valid_rr
+    if current_last_rr is not None:
+        diff_percent = abs(new_rr - current_last_rr) / current_last_rr
         if diff_percent > 0.25:
+            consecutive_rejects += 1
+            if consecutive_rejects >= 3:
+                consecutive_rejects = 0
+                return True
             return False
             
+    consecutive_rejects = 0
     return True
 
 

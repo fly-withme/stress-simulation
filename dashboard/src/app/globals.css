@@ -4,22 +4,33 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   
-  --color-primary: #3B98B4;
-  --color-primary-hover: #31829c;
-  --color-primary-light: rgba(59, 152, 180, 0.2);
+  --color-primary: #001864;
+  --color-primary-hover: #00134d;
+  --color-secondary: #c9def7;
+  --color-secondary-hover: #b9d3f3;
+  --color-soft-white: #f8fbff;
+  --header-height: clamp(4.75rem, 7vw, 5.5rem);
+  --color-primary-light: rgba(0, 24, 100, 0.2);
 
-  /* Custom "slate" palette tinted with the primary color, optimized for high contrast */
-  --color-slate-50: #ffffff;
-  --color-slate-100: #f0f7f9;
-  --color-slate-200: #e0eff5;
-  --color-slate-300: #b8dbe8;
-  --color-slate-400: #8abfd4;
-  --color-slate-500: #5ea1bc;
-  --color-slate-600: #3f7b96;
-  --color-slate-700: #29556a;
-  --color-slate-800: #1a3341;
-  --color-slate-900: #0a141b;
-  --color-slate-950: #04080b;
+  /* Slate ramp remapped to the new blue brand palette */
+  --color-slate-50: #f8fbff;
+  --color-slate-100: #eef4fc;
+  --color-slate-200: #dce9f8;
+  --color-slate-300: #c9def7;
+  --color-slate-400: #a8c3ea;
+  --color-slate-500: #7f9ecf;
+  --color-slate-600: #3b579f;
+  --color-slate-700: #203f8a;
+  --color-slate-800: #122c76;
+  --color-slate-900: #001864;
+  --color-slate-950: #00124d;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-soft-white);
+    color: var(--color-primary);
+  }
 }
 
 @layer utilities {
@@ -29,42 +40,302 @@
 }
 
 @keyframes pulse-bg {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+  0%, 100% { opacity: 1;   }
+  50%       { opacity: 0.5; }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CALIBRATION  —  Photorealistic 3-D Breathing Sphere
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 @layer utilities {
-  .animate-breathe {
-    animation: breathe 8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+
+  /* ── Wrapper: this is what grows & shrinks ──────────────────────────── */
+  .calib-orb {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    flex-shrink: 0;
+    will-change: transform;     /* keeps GPU layer warm for smooth animation */
+  }
+
+  /* ── The sphere: 6 stacked radial-gradient "paint" layers ──────────── *
+   *                                                                       *
+   *  Painting order (topmost listed first in background shorthand):      *
+   *  1. Primary specular  — tiny sharp white star hotspot                *
+   *  2. Secondary glint   — wider soft scatter zone                      *
+   *  3. Rim / back-light  — bright crescent on bottom-right edge         *
+   *  4. Mid-tone body     — rich mid-blue fill offsetting toward shadow  *
+   *  5. Depth shadow      — deep navy anchoring bottom-right quadrant    *
+   *  6. Base colour       — sky-blue → deep navy overall sphere gradient *
+   * ────────────────────────────────────────────────────────────────────── */
+  .calib-sphere {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+
+    background:
+      /* 1 – primary specular hotspot */
+      radial-gradient(
+        ellipse 18% 11% at 33% 26%,
+        rgba(255,255,255,0.94) 0%,
+        rgba(255,255,255,0.00) 100%
+      ),
+      /* 2 – soft secondary glint */
+      radial-gradient(
+        ellipse 38% 24% at 26% 36%,
+        rgba(210,232,255,0.52) 0%,
+        rgba(210,232,255,0.00) 100%
+      ),
+      /* 3 – rim / back-light crescent (bottom-right) */
+      radial-gradient(
+        ellipse 55% 55% at 80% 82%,
+        rgba(90,140,220,0.30) 0%,
+        rgba(90,140,220,0.00) 100%
+      ),
+      /* 4 – mid-tone blue body */
+      radial-gradient(
+        ellipse 80% 75% at 44% 48%,
+        #4a72b8  0%,
+        #1a3580 55%,
+        transparent 100%
+      ),
+      /* 5 – deep shadow, lower-right quadrant */
+      radial-gradient(
+        ellipse 70% 70% at 74% 76%,
+        #000c2e  0%,
+        transparent 75%
+      ),
+      /* 6 – base sphere colour */
+      radial-gradient(
+        circle at 38% 36%,
+        #6a99d4  0%,
+        #2651a0 28%,
+        #0a237a 54%,
+        #000d32 100%
+      );
+
+    /* Glow aura */
+    box-shadow:
+      0   0  35px  8px rgba( 50,100,200,0.52),
+      0   0  80px 20px rgba( 30, 70,160,0.28),
+      0   0 140px 45px rgba( 20, 50,130,0.14),
+      inset 0 0 22px 6px rgba(  0, 10, 50,0.60);
+
+    transition: box-shadow 0.7s ease;
+  }
+
+  /* ── Concentric rings (bloom in sync with breathing) ─────────────── */
+  .calib-orb-ring {
+    position: absolute;
+    border-radius: 9999px;
+    border: 1.5px solid rgba(127,158,207,0.30);
+    pointer-events: none;
+  }
+  .calib-orb-ring-1 {
+    inset: -22px;
+    animation: calib-ring-pulse 10s ease-in-out infinite;
+  }
+  .calib-orb-ring-2 {
+    inset: -46px;
+    border-color: rgba(127,158,207,0.16);
+    animation: calib-ring-pulse 10s ease-in-out infinite;
+    animation-delay: 0.18s;
+  }
+  .calib-orb-ring-3 {
+    inset: -74px;
+    border-color: rgba(127,158,207,0.08);
+    animation: calib-ring-pulse 10s ease-in-out infinite;
+    animation-delay: 0.36s;
+  }
+
+  /* ── Floating ground shadow ─────────────────────────────────────────── */
+  .calib-shadow {
+    border-radius: 50%;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(0,8,40,0.55) 0%,
+      transparent 70%
+    );
+    filter: blur(6px);
+    transition: width 0.7s ease, opacity 0.7s ease;
+  }
+  .calib-shadow-normal   { width: 130px; height: 20px; opacity: 0.55; }
+  .calib-shadow-expanded { width: 185px; height: 20px; opacity: 0.30; }
+
+  /* ── Breathing phase classes ─────────────────────────────────────────── */
+  .calib-breathe-active { animation: calib-breathe 10s ease-in-out infinite; }
+  .calib-idle { animation: calib-idle-pulse 4s ease-in-out infinite; }
+
+  /* ── Keyframes ────────────────────────────────────────────────────────── */
+  @keyframes calib-breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.35); }
+  }
+  @keyframes calib-idle-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.07); opacity: 1; }
+  }
+  @keyframes calib-ring-pulse {
+    0% { transform: scale(1); opacity: 0.55; }
+    37.5% { transform: scale(1.3); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.75; }
+    100% { transform: scale(1); opacity: 0.25; }
   }
 }
 
-@keyframes breathe {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 20px rgba(59, 152, 180, 0.2);
-  }
-  50% {
-    transform: scale(1.6);
-    box-shadow: 0 0 80px rgba(59, 152, 180, 0.6);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 20px rgba(59, 152, 180, 0.2);
-  }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Remove focus outline on recharts components
+   ═══════════════════════════════════════════════════════════════════════════ */
+.recharts-wrapper *:focus { outline: none !important; }
+.recharts-surface:focus   { outline: none !important; }
+.recharts-responsive-container:focus,
+.recharts-responsive-container *:focus { outline: none !important; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIVE DASHBOARD — Redesigned Supervisor View
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Animated gradient background */
+.live-bg {
+  background: var(--color-soft-white);
+  position: relative;
+}
+.live-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 80%, rgba(201,222,247,0.3) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 80% 20%, rgba(201,222,247,0.3) 0%, transparent 70%);
+  pointer-events: none;
+  animation: live-bg-drift 20s ease-in-out infinite alternate;
+}
+@keyframes live-bg-drift {
+  0%   { opacity: 0.6; transform: scale(1) translate(0, 0); }
+  100% { opacity: 1;   transform: scale(1.05) translate(-2%, 3%); }
 }
 
-/* Remove focus outline on recharts components */
-.recharts-wrapper *:focus {
-  outline: none !important;
+/* Light mode card */
+.glass-card {
+  background: #ffffff;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
 }
-.recharts-surface:focus {
-  outline: none !important;
+.glass-card:hover {
+  border-color: var(--color-slate-300);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
-.recharts-responsive-container:focus, .recharts-responsive-container *:focus {
-  outline: none !important;
+
+/* Camera overlay glass — stronger blur for video overlay mode */
+.glass-hud {
+  background: rgba(0,10,30,0.55);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 1rem;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Live pulse dot */
+.live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239,68,68,0.8);
+  animation: live-dot-pulse 2s ease-in-out infinite;
+}
+@keyframes live-dot-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(239,68,68,0.8); transform: scale(1); }
+  50%      { box-shadow: 0 0 16px rgba(239,68,68,1);   transform: scale(1.2); }
+}
+
+/* Metric label */
+.metric-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--color-slate-500);
+}
+
+/* Metric value */
+.metric-value {
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Toggle pill container */
+.toggle-pill {
+  display: flex;
+  align-items: center;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 9999px;
+  background: var(--color-slate-100);
+  border: 1px solid var(--color-slate-200);
+}
+.toggle-pill button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.3s ease;
+}
+.toggle-pill button.active {
+  background: var(--color-primary);
+  color: #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(0, 24, 100, 0.1), 0 2px 4px -1px rgba(0, 24, 100, 0.06);
+}
+.toggle-pill button.inactive {
+  background: transparent;
+  color: var(--color-slate-500);
+}
+.toggle-pill button.inactive:hover {
+  color: var(--color-slate-700);
+}
+
+/* Bottom timeline strip */
+.timeline-strip {
+  background: rgba(255,255,255,0.02);
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Progress bar base */
+.live-progress-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color-slate-200);
+  overflow: hidden;
+}
+.live-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.8s ease, background 0.6s ease;
+}
+
+/* Stress zone colors */
+.zone-calm    { color: #7f9ecf; }
+.zone-load    { color: #3b579f; }
+.zone-overload{ color: #f87171; }
+
+/* Camera feed placeholder */
+.camera-feed-placeholder {
+  background:
+    radial-gradient(ellipse 80% 80% at 50% 50%, #0a1628 0%, #020812 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const userId = formData.get('userId') as string;
     const sessionDataStr = formData.get('sessionData') as string;
     const reviewStatsStr = formData.get('reviewStats') as string;
-    const videoFile = formData.get('video') as Blob | null;
+    const sessionNameFromClient = formData.get('sessionName') as string | null;
 
     if (!userId || !sessionDataStr) {
       return NextResponse.json(
@@ -24,6 +24,10 @@ export async function POST(request: Request) {
     const sessionData = JSON.parse(sessionDataStr);
     const timestamp = Date.now();
     const sessionId = `session_${timestamp}`;
+    const defaultSessionName = `Session ${new Date(timestamp).toISOString().slice(0, 10)}`;
+    const sessionName = sessionNameFromClient && sessionNameFromClient.trim().length > 0
+      ? sessionNameFromClient.trim()
+      : defaultSessionName;
 
     // Define storage path: dashboard/data/[userId]/[sessionId]/
     const dataDir = path.join(process.cwd(), 'data', userId, sessionId);
@@ -36,6 +40,7 @@ export async function POST(request: Request) {
       userId,
       sessionId,
       timestamp,
+      sessionName,
       reviewStats: reviewStatsStr ? JSON.parse(reviewStatsStr) : null,
       timeline: sessionData
     };
@@ -46,18 +51,11 @@ export async function POST(request: Request) {
       'utf8'
     );
 
-    // 2. Save Video Blob if it exists
-    if (videoFile) {
-      const buffer = Buffer.from(await videoFile.arrayBuffer());
-      await writeFile(
-        path.join(dataDir, 'recording.webm'),
-        buffer
-      );
-    }
-
     return NextResponse.json({ 
       success: true, 
       message: 'Session saved successfully',
+      sessionId,
+      sessionName,
       path: `data/${userId}/${sessionId}`
     });
 
@@ -114,6 +112,7 @@ export async function GET(request: Request) {
             sessions.push({
               sessionId: parsed.sessionId,
               timestamp: parsed.timestamp,
+              sessionName: parsed.sessionName || `Session ${new Date(parsed.timestamp).toISOString().slice(0, 10)}`,
               reviewStats: parsed.reviewStats || { duration: 0, avg: 0, max: 0 },
             });
           } catch (parseErr) {
@@ -132,6 +131,46 @@ export async function GET(request: Request) {
     console.error('Failed to fetch sessions:', error);
     return NextResponse.json(
       { error: 'Internal server error while fetching sessions' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const userId = body?.userId as string | undefined;
+    const sessionId = body?.sessionId as string | undefined;
+    const sessionNameRaw = body?.sessionName as string | undefined;
+
+    if (!userId || !sessionId || !sessionNameRaw) {
+      return NextResponse.json(
+        { error: 'Missing required fields (userId, sessionId, sessionName)' },
+        { status: 400 }
+      );
+    }
+
+    const sessionName = sessionNameRaw.trim();
+    if (!sessionName) {
+      return NextResponse.json({ error: 'Session name cannot be empty' }, { status: 400 });
+    }
+
+    const timelinePath = path.join(process.cwd(), 'data', userId, sessionId, 'timeline.json');
+    if (!existsSync(timelinePath)) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    const rawData = await readFile(timelinePath, 'utf8');
+    const parsed = JSON.parse(rawData);
+    parsed.sessionName = sessionName;
+
+    await writeFile(timelinePath, JSON.stringify(parsed, null, 2), 'utf8');
+
+    return NextResponse.json({ success: true, sessionName });
+  } catch (error) {
+    console.error('Failed to rename session:', error);
+    return NextResponse.json(
+      { error: 'Internal server error while renaming session' },
       { status: 500 }
     );
   }
