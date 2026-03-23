@@ -241,6 +241,15 @@
   -webkit-backdrop-filter: blur(20px);
 }
 
+.glass-hud-white {
+  background: rgba(255,255,255,0.88);
+  border: 1px solid var(--color-slate-200);
+  border-radius: 1.25rem;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
 /* Live pulse dot */
 .live-dot {
   width: 10px;
@@ -333,9 +342,9 @@
 
 /* Camera feed placeholder */
 .camera-feed-placeholder {
-  background:
-    radial-gradient(ellipse 80% 80% at 50% 50%, #0a1628 0%, #020812 100%);
+  background: var(--color-slate-100);
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: inherit;
 }

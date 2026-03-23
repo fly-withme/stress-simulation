@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { Wifi, WifiOff, Play, Square, Activity, LogOut, User, RefreshCw, Pause, Brain, Pencil, Check, X, Eye, Video, Heart, Timer, Shield, TrendingDown, Zap, Target } from "lucide-react";
+import { Wifi, WifiOff, Play, Square, Activity, LogOut, User, RefreshCw, Pause, Brain, Pencil, Check, X, Eye, Video, Heart, Timer, Shield, TrendingDown, Zap, Target, Leaf } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -45,6 +45,7 @@ interface SessionDataPoint {
   bpm: number;
   rmssd: number;
   workload: number;
+  pupilSize?: number;
 }
 
 const CALIBRATION_DURATION_SEC = 60;
@@ -90,6 +91,8 @@ export default function DashboardPage() {
   const [eyeTrackerConnected, setEyeTrackerConnected] = useState(false);
   const [eyeTrackerCalibrated, setEyeTrackerCalibrated] = useState(false);
   const [boxCameraFeedActive, setBoxCameraFeedActive] = useState(false);
+  const [cameraStreamActive, setCameraStreamActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   // Session State
   const [sessionData, setSessionData] = useState<SessionDataPoint[]>([]);
@@ -97,7 +100,7 @@ export default function DashboardPage() {
   // Review timeline cursor
   const [videoTime, setVideoTime] = useState(0);
   const [isSessionPaused, setIsSessionPaused] = useState(false);
-  const [liveMode, setLiveMode] = useState<"biofeedback" | "camera">("biofeedback");
+  const [liveMode, setLiveMode] = useState<"biofeedback" | "camera" | "minimal">("biofeedback");
 
   // Refs for tracking time across websocket callbacks without dependency loops
   const viewStateRef = useRef<ViewState>("LOGIN");
@@ -111,12 +114,154 @@ export default function DashboardPage() {
   const pendingRescanRef = useRef<boolean>(false);
   const scanningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  const attachCameraVideoRef = (el: HTMLVideoElement | null) => {
+    cameraVideoRef.current = el;
+    if (!el || !cameraStreamRef.current) return;
+    el.srcObject = cameraStreamRef.current;
+    el.play().catch(() => {
+      // Autoplay may fail silently until user interaction.
+    });
+  };
 
   const canStartLiveFlow = bleState === "connected" || isDevMode;
   const hrvSensorReady = wsConnected && bleState === "connected";
   const pupilDilationSensorReady = eyeTrackerConnected && eyeTrackerCalibrated;
-  const cameraSensorReady = boxCameraFeedActive;
+  const cameraSensorReady = boxCameraFeedActive || cameraStreamActive;
   const allCalibrationSensorsReady = hrvSensorReady && pupilDilationSensorReady && cameraSensorReady;
+
+  // Browser camera stream for USB/webcam integration in live camera views.
+  useEffect(() => {
+    const shouldUseCamera = viewState === "LIVE" && (liveMode === "camera" || liveMode === "minimal");
+
+    const stopCameraStream = () => {
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach(track => track.stop());
+        cameraStreamRef.current = null;
+      }
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = null;
+      }
+      setCameraStreamActive(false);
+    };
+
+    if (!shouldUseCamera) {
+      stopCameraStream();
+      return;
+    }
+
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setCameraError("Camera API not available in this browser");
+      setCameraStreamActive(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const bindStreamToVideo = (stream: MediaStream) => {
+      const videoEl = cameraVideoRef.current;
+      if (!videoEl) return;
+      videoEl.srcObject = stream;
+      videoEl.play().catch(() => {
+        // Autoplay may fail silently until user interaction.
+      });
+    };
+
+    const startCameraStream = async () => {
+      try {
+        if (cameraStreamRef.current) {
+          bindStreamToVideo(cameraStreamRef.current);
+          setCameraStreamActive(false);
+          setCameraError(null);
+          return;
+        }
+
+        const bootstrapStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+
+        const pickPreferredCameraId = async () => {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoDevices = devices.filter(d => d.kind === "videoinput");
+          if (videoDevices.length === 0) return null;
+
+          const scored = videoDevices.map(device => {
+            const label = device.label.toLowerCase();
+            let score = 0;
+
+            if (/(usb|capture|cam link|elgato|hdmi|uvc|webcam)/.test(label)) score += 5;
+            if (/(facetime|integrated|built-in|builtin|internal|laptop|isight)/.test(label)) score -= 5;
+
+            return { id: device.deviceId, label: device.label || "Unknown camera", score };
+          }).sort((a, b) => b.score - a.score);
+
+          const preferred = scored.find(d => d.score > 0) ?? scored[0];
+          console.log("[Camera] Preferred device:", preferred.label);
+          return preferred.id;
+        };
+
+        let stream: MediaStream = bootstrapStream;
+        const preferredCameraId = await pickPreferredCameraId();
+
+        if (preferredCameraId) {
+          try {
+            const preferredStream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                deviceId: { exact: preferredCameraId },
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              },
+              audio: false,
+            });
+            bootstrapStream.getTracks().forEach(track => track.stop());
+            stream = preferredStream;
+          } catch (selectionErr) {
+            console.warn("[Camera] Falling back to default stream:", selectionErr);
+          }
+        }
+
+        if (cancelled) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+
+        cameraStreamRef.current = stream;
+        bindStreamToVideo(stream);
+        setCameraStreamActive(false);
+        setCameraError(null);
+      } catch (err) {
+        console.error("Failed to access USB camera", err);
+        setCameraStreamActive(false);
+        setCameraError("Camera permission denied or camera not available");
+      }
+    };
+
+    startCameraStream();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [viewState, liveMode]);
+
+  useEffect(() => {
+    if (!cameraStreamRef.current || !cameraVideoRef.current) return;
+    cameraVideoRef.current.srcObject = cameraStreamRef.current;
+    cameraVideoRef.current.play().catch(() => {
+      // Autoplay may fail silently until user interaction.
+    });
+  }, [viewState, liveMode, cameraStreamActive]);
+
+  useEffect(() => {
+    return () => {
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach(track => track.stop());
+        cameraStreamRef.current = null;
+      }
+    };
+  }, []);
 
   // Sync refs with state
   useEffect(() => { viewStateRef.current = viewState; }, [viewState]);
@@ -938,10 +1083,10 @@ export default function DashboardPage() {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col relative overflow-y-auto w-full">
+      <div className="flex-1 flex flex-col relative w-full overflow-hidden">
       {/* VIEW: LOGIN */}
       {viewState === "LOGIN" && (
-        <main className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 max-w-md mx-auto w-full text-center">
+        <main className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 max-w-md mx-auto w-full text-center overflow-y-auto">
           <h2 className="inline-flex items-center gap-3 text-4xl font-extrabold text-[#001864] mb-8 tracking-tight">
             <Brain className="w-9 h-9 text-primary" />
             BioTrace
@@ -1023,7 +1168,7 @@ export default function DashboardPage() {
 
       {/* VIEW: OVERVIEW (Dashboard) */}
       {viewState === "OVERVIEW" && (
-        <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 max-w-6xl mx-auto w-full">
+        <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 max-w-6xl mx-auto w-full overflow-y-auto">
           {renderMinimalHeader("Dashboard")}
 
           <div className="flex flex-col gap-6">
@@ -1209,7 +1354,7 @@ export default function DashboardPage() {
 
       {/* VIEW: HISTORY */}
       {viewState === "HISTORY" && (
-        <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 max-w-6xl mx-auto w-full">
+        <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 max-w-6xl mx-auto w-full overflow-y-auto">
           {renderMinimalHeader("History")}
 
           <div className="flex flex-col gap-6 w-full">
@@ -1321,7 +1466,7 @@ export default function DashboardPage() {
 
       {/* VIEW: SETTINGS */}
       {viewState === "SETTINGS" && (
-        <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 max-w-6xl mx-auto w-full">
+        <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 max-w-6xl mx-auto w-full overflow-y-auto">
           {renderMinimalHeader("Settings")}
 
           <div className="flex flex-col gap-6 w-full max-w-2xl">
@@ -1390,7 +1535,7 @@ export default function DashboardPage() {
 
       {/* VIEW: CALIBRATION */}
       {viewState === "CALIBRATION_PENDING" && (
-        <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto w-full">
+        <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto w-full overflow-y-auto">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary text-center">Device Check</h1>
           <p className="text-slate-500 text-sm sm:text-base mt-3 text-center max-w-2xl">
             Confirm all sensors are ready before starting baseline calibration.
@@ -1558,16 +1703,13 @@ export default function DashboardPage() {
         const cogLoadPct = Math.round(workloadValue);
 
         const GAUGE_R = 70;
-        const GAUGE_SPAN_DEG = 220;
         const gaugeCirc = 2 * Math.PI * GAUGE_R;
-        const gaugeFilled = gaugeCirc * ((GAUGE_SPAN_DEG / 360) * (cogLoadPct / 100));
         const gaugeColor = cogLoadPct >= 66 ? "#ef4444" : cogLoadPct >= 33 ? "#f59e0b" : "#10b981";
         const gaugeGlow = cogLoadPct >= 66
             ? "drop-shadow(0 0 8px rgba(239,68,68,0.4))"
             : cogLoadPct >= 33
             ? "drop-shadow(0 0 8px rgba(245,158,11,0.4))"
             : "drop-shadow(0 0 8px rgba(16,185,129,0.3))";
-        const gaugeTotal = gaugeCirc * (GAUGE_SPAN_DEG / 360);
         const zoneLabel = cogLoadPct >= 66 ? "Overload Warning" : cogLoadPct >= 33 ? "High Effort" : "Optimal / Baseline";
         const cogDonutFilled = gaugeCirc * (cogLoadPct / 100);
 
@@ -1578,77 +1720,37 @@ export default function DashboardPage() {
         const stressPct = hrvDelta !== null ? Math.round(Math.max(0, Math.min(100, hrvDelta < 0 ? (Math.abs(hrvDelta) / 30) * 100 : 0))) : 0;
         const stressDonutFilled = gaugeCirc * (stressPct / 100);
         const stressDonutColor = stressPct >= 66 ? "#ef4444" : stressPct >= 33 ? "#f59e0b" : "#3b579f";
+        const stressTrafficColor = stressPct >= 66 ? "#ef4444" : stressPct >= 33 ? "#f59e0b" : "#10b981";
         const stressDonutGlow = stressPct >= 66
             ? "drop-shadow(0 0 8px rgba(239,68,68,0.4))"
             : stressPct >= 33
             ? "drop-shadow(0 0 8px rgba(245,158,11,0.4))"
             : "drop-shadow(0 0 8px rgba(59,87,159,0.3))";
 
-        const stressColor = hrvDelta === null ? "#cbd5e1" : hrvDelta < -15 ? "#ef4444" : hrvDelta > 5 ? "#059669" : "#3b579f";
-
         const durMins = Math.floor(sessionDurationSec / 60);
         const durSecs = sessionDurationSec % 60;
 
-        // Performance score
+        // Performance score (used in camera HUD)
         const perfScore = totalSamples > 0 ? Math.round(accuracyPct * 0.7 + Math.min(100, (60 / Math.max(1, sessionDurationSec / 3)) * 100) * 0.3) : 0;
-
-        // Stress events count
-        let liveStressEvents = 0;
-        let inStress = false;
-        sessionData.forEach(d => {
-          if (d.workload < -30) { if (!inStress) { liveStressEvents++; inStress = true; } }
-          else inStress = false;
-        });
-
-        // Sparkline for bottom timeline
-        const tlW = 800, tlH = 48;
-        const tlPoints = recentData.length > 1
-          ? recentData.map((d, i) => {
-              const x = (i / (recentData.length - 1)) * tlW;
-              const y = tlH - Math.max(0, Math.min(tlH, ((d.workload + 100) / 200) * tlH));
-              return `${x},${y}`;
-            }).join(" ")
-          : null;
-        const tlFillPoints = tlPoints ? `0,${tlH} ${tlPoints} ${tlW},${tlH}` : null;
-
-        const liveChartData = sessionData.map(d => {
-          let knobPercentage = 0;
-          if (d.workload >= -15) {
-            knobPercentage = Math.max(0, ((-d.workload + 10) / 25) * 33);
-          } else if (d.workload >= -30) {
-            knobPercentage = 33 + ((-d.workload - 15) / 15) * 33;
-          } else {
-            knobPercentage = 66 + ((-d.workload - 30) / 15) * 34;
-          }
-          return {
-            timeOffset: d.timeOffset,
-            cogLoad: Math.round(Math.min(100, Math.max(0, knobPercentage))),
-            hrvDelta: Math.round(d.workload)
-          };
-        });
+        const perfTrafficColor = totalSamples > 0 ? (perfScore >= 70 ? "#10b981" : perfScore >= 40 ? "#f59e0b" : "#ef4444") : "#94a3b8";
 
         const isCameraMode = liveMode === "camera";
+        const isMinimalMode = liveMode === "minimal";
 
         return (
           <main className="flex-1 w-full h-full relative overflow-hidden flex flex-col bg-soft-white">
 
             {/* ── TOP BAR ─────────────────────────────────────────── */}
             <div className="relative z-30 flex items-center justify-between px-6 py-3.5 bg-white border-b border-slate-200">
-              {/* Left: live dot + session label */}
+              {/* Left: live dot + session label + mode toggle */}
               <div className="flex items-center gap-3">
                 <span className="live-dot" />
                 <span className="text-slate-800 text-sm font-semibold tracking-widest uppercase select-none">Live Session</span>
                 {isSessionPaused && (
                   <span className="ml-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase" style={{ background: "rgba(251,191,36,0.15)", color: "#d97706", border: "1px solid rgba(251,191,36,0.3)" }}>Paused</span>
                 )}
-                <span className="ml-2 text-slate-300 text-xs">|</span>
-                <span className="text-slate-500 text-xs font-medium">{session?.user?.name || "Practitioner"}</span>
-              </div>
-
-              {/* Right: mode toggle + controls */}
-              <div className="flex items-center gap-3">
-                {/* Mode toggle */}
-                <div className="toggle-pill">
+                
+                <div className="toggle-pill ml-4">
                   <button
                     id="live-mode-biofeedback"
                     onClick={() => setLiveMode("biofeedback")}
@@ -1668,216 +1770,289 @@ export default function DashboardPage() {
                 </div>
 
                 <button
-                  onClick={() => setIsSessionPaused(p => !p)}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold cursor-pointer transition-all bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200"
+                  id="live-mode-minimal"
+                  onClick={() => setLiveMode("minimal")}
+                  title="Minimal camera focus view"
+                  aria-label="Switch to minimal focus view"
+                  className="w-9 h-9 rounded-full border transition-all flex items-center justify-center"
+                  style={{
+                    borderColor: liveMode === "minimal" ? "rgba(16,185,129,0.45)" : "rgba(148,163,184,0.35)",
+                    background: liveMode === "minimal" ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.7)",
+                    color: liveMode === "minimal" ? "#059669" : "#64748b"
+                  }}
                 >
-                  {isSessionPaused ? <><Play className="w-3.5 h-3.5" /> Resume</> : <><Pause className="w-3.5 h-3.5" /> Pause</>}
+                  <Leaf className="w-4 h-4" />
                 </button>
+              </div>
+
+              {/* Right: Session Control Center — unified Duration, Pause, End Session */}
+              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-full overflow-hidden shadow-sm">
+                {/* Duration Section */}
+                <div className="flex items-center gap-2 px-4 py-2 border-r border-slate-200/60">
+                  <Timer className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="font-mono text-xs font-semibold text-slate-700 tabular-nums">
+                    {`${String(durMins).padStart(2, "0")}:${String(durSecs).padStart(2, "0")}`}
+                  </span>
+                </div>
+                
+                {/* Pause/Resume Button */}
+                <button
+                  onClick={() => setIsSessionPaused(p => !p)}
+                  className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-100 transition-colors border-r border-slate-200/60"
+                >
+                  {isSessionPaused ? <Play className="w-3 h-3 fill-current" /> : <Pause className="w-3 h-3 fill-current" />}
+                  {isSessionPaused ? "Resume" : "Pause"}
+                </button>
+                
+                {/* End Session Button */}
                 <button
                   onClick={endSession}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-semibold cursor-pointer transition-all"
-                  style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5" }}
+                  className="flex items-center gap-1.5 px-5 py-2 text-[10px] font-bold uppercase tracking-wider text-red-500 hover:bg-red-50/50 transition-colors"
                 >
-                  <Square className="w-3.5 h-3.5" /> End Session
+                  <Square className="w-3 h-3 fill-current" />
+                  End Session
                 </button>
               </div>
             </div>
 
-            {/* ── BIOFEEDBACK MODE ────────────────────────────────── */}
-            {!isCameraMode && (
-              <div className="flex-1 flex flex-col gap-4 p-4 lg:p-6 overflow-y-auto relative z-10 w-full">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
-                  
-                  {/* ── LEFT SIDE (Span 3) ── */}
-                  <div className="lg:col-span-3 flex flex-col gap-4">
-                    {/* Pupil Dilation */}
-                    <div className="glass-card p-4 flex flex-col gap-2 justify-center flex-1">
-                      <p className="metric-label flex items-center gap-2 justify-between">
-                        Pupil Dilation <Eye className="w-4 h-4 text-slate-500" />
-                      </p>
-                      <div className="flex flex-col mt-auto items-center justify-center flex-1 w-full gap-2">
-                         <div className="flex items-baseline gap-1">
-                           <span className="font-mono text-5xl font-light text-slate-400">--</span>
-                           <span className="text-slate-400 font-medium text-lg">mm</span>
+            {/* ── BIOFEEDBACK MODE — 3 × 2 Grid Blueprint ─────────── */}
+            {/* ── BIOFEEDBACK MODE — Hero + KPI Row ─────────── */}
+            {!isCameraMode && !isMinimalMode && (
+              <div className="flex-1 flex flex-col gap-4 p-4 overflow-hidden">
+                
+                {/* ZONE A: CORE STATE HERO (Top 60%) */}
+                <div className="glass-card flex p-6 relative overflow-hidden shrink-0" style={{ height: "56%" }}>
+                  {/* Gauges Column */}
+                  <div className="flex flex-col w-[35%] min-w-[280px] border-r border-slate-200/40 pr-8 gap-4 min-h-0">
+                    <p className="metric-label flex items-center justify-between shrink-0 mb-2">
+                       Core State Synthesis <Brain className="w-4 h-4 text-slate-500" />
+                    </p>
+                    
+                    <div className="flex-1 flex items-center justify-between px-2">
+                       {/* Workload Gauge */}
+                       <div className="flex flex-col items-center gap-4">
+                         <div className="relative shrink-0" style={{ width: 130, height: 130 }}>
+                            <svg viewBox="0 0 180 180" className="absolute inset-0 w-full h-full" style={{ transform: "rotate(-90deg)" }}>
+                              <circle cx="90" cy="90" r={GAUGE_R} fill="none" stroke="rgba(0,24,100,0.06)" strokeWidth="18" />
+                              <circle cx="90" cy="90" r={GAUGE_R} fill="none" stroke={gaugeColor} strokeWidth="18"
+                                strokeDasharray={`${cogDonutFilled} ${gaugeCirc - cogDonutFilled}`} strokeLinecap="round" />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center pt-2">
+                               <div className="flex items-baseline">
+                                 {sessionData.length > 1 ? (
+                                    <span className="font-mono text-[3.25rem] font-extralight tracking-tight leading-none" style={{ color: gaugeColor }}>{cogLoadPct}</span>
+                                 ) : (
+                                    <span className="font-mono text-[3.25rem] font-extralight tracking-tight leading-none text-slate-300 animate-pulse">--</span>
+                                 )}
+                                 <span className="text-xl font-bold uppercase tracking-widest ml-1 leading-none" style={{ color: gaugeColor }}>%</span>
+                               </div>
+                            </div>
                          </div>
-                         <p className="text-[11px] text-slate-400 mt-1">Sensor not connected</p>
-                      </div>
-                    </div>
+                         <div className="flex flex-col items-center text-center">
+                           <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Cognitive Workload</span>
+                           <span className="text-sm font-semibold mt-0.5" style={{ color: gaugeColor }}>{isCalibrated ? zoneLabel : "Baseline needed"}</span>
+                         </div>
+                       </div>
 
-                    {/* HRV (RMSSD in ms) */}
-                    <div className="glass-card p-4 flex flex-col gap-2 justify-center flex-1">
-                      <p className="metric-label flex items-center gap-2 justify-between">
-                        HRV (RMSSD) <Heart className="w-4 h-4 text-slate-500" />
-                      </p>
-                      <div className="flex flex-col mt-auto items-center justify-center flex-1 w-full gap-2">
-                         <div className="flex items-baseline gap-1">
-                           <span className="font-mono text-5xl font-light text-primary">
-                             {currentRmssd !== null ? currentRmssd.toFixed(1) : "--"}
+                       {/* Stress Gauge */}
+                       <div className="flex flex-col items-center gap-4">
+                         <div className="relative shrink-0" style={{ width: 130, height: 130 }}>
+                            <svg viewBox="0 0 180 180" className="absolute inset-0 w-full h-full" style={{ transform: "rotate(-90deg)" }}>
+                              <circle cx="90" cy="90" r={GAUGE_R} fill="none" stroke="rgba(0,24,100,0.06)" strokeWidth="18" />
+                              <circle cx="90" cy="90" r={GAUGE_R} fill="none" stroke={stressDonutColor} strokeWidth="18"
+                                strokeDasharray={`${stressDonutFilled} ${gaugeCirc - stressDonutFilled}`} strokeLinecap="round" />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center pt-2">
+                               <div className="flex items-baseline">
+                                 {sessionData.length > 1 && hrvDelta !== null ? (
+                                    <span className="font-mono text-[3.25rem] font-extralight tracking-tight leading-none" style={{ color: stressDonutColor }}>{stressPct}</span>
+                                 ) : (
+                                    <span className="font-mono text-[3.25rem] font-extralight tracking-tight leading-none text-slate-300 animate-pulse">--</span>
+                                 )}
+                                 <span className="text-xl font-bold uppercase tracking-widest ml-1 leading-none" style={{ color: stressDonutColor }}>%</span>
+                               </div>
+                            </div>
+                         </div>
+                         <div className="flex flex-col items-center text-center">
+                           <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Physical Stress</span>
+                           <span className="text-sm font-semibold mt-0.5" style={{ color: stressDonutColor }}>
+                             {isCalibrated && hrvDelta !== null ? (stressPct >= 66 ? "High Stress Active" : stressPct >= 33 ? "Elevated Warning" : "Relaxed State") : "Baseline needed"}
                            </span>
-                           <span className="text-slate-500 font-medium text-lg">ms</span>
                          </div>
-                         <div className="px-3 py-1.5 rounded-full border border-slate-200 mt-1 bg-slate-50">
-                           <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider mr-2">Baseline</span>
-                           <span className="text-xs font-medium text-slate-600 font-mono">{baselineRmssd ? `${baselineRmssd.toFixed(1)} ms` : "--"}</span>
+                       </div>
+                    </div>
+                  </div>
+
+                  {/* Chart Column */}
+                  <div className="flex flex-col flex-1 pl-8 min-h-0 relative">
+                     <div className="flex items-center justify-between shrink-0 mb-4">
+                         <p className="metric-label flex items-center gap-2 m-0">
+                           Synchronized State Timeline (Real-time)
+                         </p>
+                         <div className="flex items-center gap-4 text-xs font-semibold uppercase tracking-widest">
+                            <span className="flex items-center gap-1.5" style={{ color: gaugeColor }}><div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: gaugeColor }} />Workload</span>
+                            <span className="flex items-center gap-1.5" style={{ color: stressDonutColor }}><div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: stressDonutColor }} />Stress</span>
                          </div>
-                      </div>
-                    </div>
+                     </div>
+                     <div className="flex-1 w-full min-h-0 relative">
+                       {sessionData.length > 1 ? (
+                         <ResponsiveContainer width="100%" height="100%">
+                           <LineChart data={deltaRmssdTimeline}>
+                              <XAxis dataKey="timeOffset" hide />
+                              <YAxis hide domain={[-500, 500]} yAxisId="workload" />
+                              <YAxis hide domain={[-50, 50]} yAxisId="stress" />
+                              <Line yAxisId="workload" type="monotone" dataKey="workload" stroke={gaugeColor} strokeWidth={2.5} dot={false} isAnimationActive={false} />
+                              <Line yAxisId="stress" type="monotone" dataKey="deltaRmssd" stroke={stressDonutColor} strokeWidth={2.5} dot={false} isAnimationActive={false} />
+                           </LineChart>
+                         </ResponsiveContainer>
+                       ) : (
+                         <div className="absolute inset-0 flex items-center justify-center">
+                           <div className="absolute top-1/2 left-0 right-0 border-t border-dashed border-slate-200 -translate-y-1/2 z-0" />
+                           <ResponsiveContainer width="100%" height="100%" className="opacity-[0.08] animate-pulse relative z-10">
+                              <LineChart data={[{v:20},{v:15},{v:30},{v:20},{v:25},{v:15},{v:35},{v:25}]}>
+                                 <YAxis hide domain={[0,40]} />
+                                 <Line type="basis" dataKey="v" stroke="#334155" strokeWidth={3} dot={false} isAnimationActive={false} />
+                              </LineChart>
+                           </ResponsiveContainer>
+                         </div>
+                       )}
+                     </div>
                   </div>
-
-                  {/* ── CENTER (Span 6) ── */}
-                  <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Cognitive Workload Card */}
-                    <div className="glass-card flex-1 p-4 flex items-center justify-center relative flex-col">
-                      <p className="absolute top-4 left-4 metric-label tracking-widest uppercase flex items-center gap-2">
-                        <Brain className="w-4 h-4 text-slate-500" /> Cognitive Workload
-                      </p>
-                      <div className="relative shrink-0 mt-6" style={{ width: 140, height: 140 }}>
-                        <svg viewBox="0 0 180 180" className="absolute inset-0 w-full h-full" style={{ transform: "rotate(-90deg)" }}>
-                          <circle cx="90" cy="90" r={GAUGE_R} fill="none" stroke="rgba(0,24,100,0.06)" strokeWidth="14" />
-                          <circle cx="90" cy="90" r={GAUGE_R} fill="none" stroke={gaugeColor} strokeWidth="14"
-                            strokeDasharray={`${cogDonutFilled} ${gaugeCirc - cogDonutFilled}`} strokeLinecap="round"
-                            style={{ transition: "stroke-dasharray 0.8s ease, stroke 0.6s ease", filter: gaugeGlow }} />
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="font-mono text-4xl font-light transition-all duration-700" style={{ color: gaugeColor }}>
-                            {isCalibrated ? cogLoadPct : "--"}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="mt-4 flex flex-col items-center gap-1">
-                        <span className="text-base font-medium" style={{ color: gaugeColor }}>
-                           {isCalibrated ? zoneLabel : "Not calibrated"}
-                        </span>
-                        {isCalibrated && (
-                          <span className="text-[11px] text-slate-400">Target zone: Optimal / Baseline</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Stress Level Card */}
-                    <div className="glass-card flex-1 p-4 flex items-center justify-center relative flex-col">
-                      <p className="absolute top-4 left-4 metric-label tracking-widest uppercase flex items-center gap-2">
-                        <TrendingDown className="w-4 h-4 text-slate-500" /> Stress Levels
-                      </p>
-                      <div className="relative shrink-0 mt-6" style={{ width: 140, height: 140 }}>
-                        <svg viewBox="0 0 180 180" className="absolute inset-0 w-full h-full" style={{ transform: "rotate(-90deg)" }}>
-                          <circle cx="90" cy="90" r={GAUGE_R} fill="none" stroke="rgba(0,24,100,0.06)" strokeWidth="14" />
-                          <circle cx="90" cy="90" r={GAUGE_R} fill="none" stroke={stressDonutColor} strokeWidth="14"
-                            strokeDasharray={`${stressDonutFilled} ${gaugeCirc - stressDonutFilled}`} strokeLinecap="round"
-                            style={{ transition: "stroke-dasharray 0.8s ease, stroke 0.6s ease", filter: stressDonutGlow }} />
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="font-mono text-4xl font-light transition-all duration-700" style={{ color: stressDonutColor }}>
-                            {isCalibrated && hrvDelta !== null ? stressPct : "--"}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="mt-4 flex flex-col items-center gap-1">
-                        <span className="text-base font-medium" style={{ color: stressDonutColor }}>
-                           {isCalibrated && hrvDelta !== null 
-                              ? (stressPct >= 66 ? "High Stress Active" : stressPct >= 33 ? "Elevated Warning" : "Relaxed State") 
-                              : "Not calibrated"}
-                        </span>
-                        {isCalibrated && (
-                          <span className="text-[11px] text-slate-400">Based on HRV deviation</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ── RIGHT SIDE (Span 3) ── */}
-                  <div className="lg:col-span-3 flex flex-col gap-4">
-                    {/* Session Duration */}
-                    <div className="glass-card p-4 flex flex-col gap-2 justify-center flex-1">
-                      <p className="metric-label flex items-center gap-2 justify-between">
-                        Session Duration <Timer className="w-4 h-4 text-slate-500" />
-                      </p>
-                      <div className="flex flex-col mt-auto items-center justify-center flex-1 w-full gap-2">
-                        <div className="flex items-baseline gap-1">
-                          <span className="font-mono text-4xl font-light text-slate-800">
-                            {`${String(durMins).padStart(2, "0")}:${String(durSecs).padStart(2, "0")}`}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 mt-1">Active recording time</p>
-                      </div>
-                    </div>
-
-                    {/* Task Speed */}
-                    <div className="glass-card p-4 flex flex-col gap-2 justify-center flex-1">
-                      <p className="metric-label flex items-center gap-2 justify-between">
-                        Task Speed <Zap className="w-4 h-4 text-slate-500" />
-                      </p>
-                      <div className="flex flex-col mt-auto items-center justify-center flex-1 w-full gap-2">
-                        <div className="flex items-baseline gap-1">
-                          <span className="font-mono text-4xl font-light text-slate-400">
-                            --
-                          </span>
-                          <span className="text-slate-400 font-medium ml-1">op/m</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 mt-1">Telemetry not linked</p>
-                      </div>
-                    </div>
-
-                    {/* Accuracy */}
-                    <div className="glass-card p-4 flex flex-col justify-center flex-1">
-                      <p className="metric-label flex items-center gap-2 justify-between">
-                        Accuracy <Target className="w-4 h-4 text-slate-500" />
-                      </p>
-                      <div className="flex flex-col mt-auto items-center justify-center flex-1 w-full gap-3">
-                        <div className="relative flex items-center justify-center shrink-0" style={{ width: 100, height: 100 }}>
-                           <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={{ transform: "rotate(-90deg)" }}>
-                             <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(0,24,100,0.04)" strokeWidth="8" />
-                             <circle cx="50" cy="50" r="44" fill="none" stroke="url(#accuracyGradient)" strokeWidth="8"
-                               strokeDasharray={`${2 * Math.PI * 44 * (accuracyPct / 100)} ${2 * Math.PI * 44}`} strokeLinecap="round" />
-                             <defs>
-                               <linearGradient id="accuracyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                 <stop offset="0%" stopColor="#3b579f" />
-                                 <stop offset="100%" stopColor="#10b981" />
-                               </linearGradient>
-                             </defs>
-                           </svg>
-                           <div className="flex items-baseline gap-1 relative z-10">
-                              <span className="font-mono text-3xl font-light text-primary">
-                                {totalSamples > 0 ? accuracyPct : "--"}
-                              </span>
-                              <span className="text-slate-500 font-medium text-lg">%</span>
-                           </div>
-                        </div>
-                        <p className="text-[11px] text-slate-500 text-center">Based on optimal workload zones</p>
-                      </div>
-                    </div>
-                  </div>
-
                 </div>
 
-                {/* ── LIVE SESSION TIMELINE (Full Width Row) ── */}
-                <div className="glass-card p-4 md:p-6 flex flex-col gap-2 w-full h-[220px] lg:h-[260px] shrink-0 mt-2">
-                  <div className="flex items-center justify-between">
-                    <p className="metric-label tracking-widest uppercase">Live Session Timeline</p>
-                    <div className="flex items-center gap-4">
-                       <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" /><span className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Stress Δ (%)</span></div>
-                       <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-[#3b579f]" /><span className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Cognitive Load</span></div>
+                {/* ZONE B: SUPPORTING KPIS (Bottom 40%) */}
+                <div className="flex-1 grid grid-cols-4 gap-4 min-h-0">
+                  {/* KPI 1: Pupil Dilation */}
+                  <div className="glass-card p-4 flex flex-col relative overflow-hidden min-h-0 min-w-0">
+                    <p className="metric-label flex items-center justify-between shrink-0 mb-3 opacity-90">
+                      Pupil Dilation <Eye className="w-4 h-4" />
+                    </p>
+                    <div className="flex-1 flex flex-col lg:flex-row lg:items-center min-h-0 min-w-0">
+                      <div className="flex items-baseline pr-3 lg:pr-4 mb-2 lg:mb-0 shrink-0">
+                        {sessionData.length > 1 && (sessionData[sessionData.length - 1].pupilSize ?? 0) > 0 ? (
+                           <span className="font-mono text-[3rem] 2xl:text-[3.5rem] font-extralight text-slate-600 tracking-tight leading-none">{(sessionData[sessionData.length - 1].pupilSize ?? 0).toFixed(1)}</span>
+                        ) : (
+                           <span className="font-mono text-[3rem] 2xl:text-[3.5rem] font-extralight text-slate-300 tracking-tight leading-none animate-pulse">--</span>
+                        )}
+                        <span className="text-slate-500 font-medium text-lg leading-none ml-1 relative">mm</span>
+                      </div>
+                      <div className="flex-1 w-full h-full relative lg:border-l lg:border-slate-200/60 lg:pl-3 min-w-0 flex items-center border-t lg:border-t-0 pt-2 lg:pt-0">
+                        {sessionData.length > 1 && (sessionData[sessionData.length - 1].pupilSize ?? 0) > 0 ? (
+                          <ResponsiveContainer width="100%" height="80%">
+                            <LineChart data={sessionData.slice(-60)}>
+                              <YAxis hide domain={["dataMin - 0.5", "dataMax + 0.5"]} />
+                              <Line type="monotone" dataKey="pupilSize" stroke="#94a3b8" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <>
+                            <div className="absolute top-1/2 left-3 right-0 border-t border-dashed border-slate-200 -translate-y-1/2 z-0" />
+                            <ResponsiveContainer width="100%" height="80%" className="opacity-15 animate-pulse relative z-10">
+                              <LineChart data={[{v:2},{v:3},{v:2.5},{v:4},{v:3},{v:2.5},{v:3}]}>
+                                <YAxis hide domain={[0,6]} />
+                                <Line type="basis" dataKey="v" stroke="#94a3b8" strokeWidth={2} dot={false} isAnimationActive={false} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex-1 w-full min-h-0 mt-4">
-                    {liveChartData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={liveChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <XAxis dataKey="timeOffset" tickFormatter={(t) => `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`} stroke="#94a3b8" fontSize={12} axisLine={false} tickLine={false} minTickGap={30} />
-                          <YAxis yAxisId="left" stroke="#94a3b8" fontSize={12} axisLine={false} tickLine={false} domain={[0, 100]} />
-                          <YAxis yAxisId="right" orientation="right" stroke="#ef4444" fontSize={12} axisLine={false} tickLine={false} />
-                          <Tooltip 
-                            contentStyle={{ borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)", zIndex: 100, fontSize: "12px", padding: "12px" }}
-                            labelStyle={{ color: '#0f172a', fontWeight: 600, paddingBottom: 6 }}
-                            labelFormatter={(t) => `Time: ${Math.floor(Number(t)/60)}:${String(Number(t)%60).padStart(2,'0')}`} 
-                          />
-                          <Line yAxisId="left" type="monotone" name="Cognitive Load" dataKey="cogLoad" stroke="#3b579f" strokeWidth={2.5} dot={false} isAnimationActive={false} />
-                          <Line yAxisId="right" type="monotone" name="Stress Δ (%)" dataKey="hrvDelta" stroke="#ef4444" strokeWidth={2} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-base font-medium">Waiting for session data...</div>
-                    )}
+
+                  {/* KPI 2: HRV */}
+                  <div className="glass-card p-4 flex flex-col relative overflow-hidden min-h-0 min-w-0">
+                    <p className="metric-label flex items-center justify-between shrink-0 mb-3 opacity-90">
+                      HRV (RMSSD) <Heart className="w-4 h-4" />
+                    </p>
+                    <div className="flex-1 flex flex-col lg:flex-row lg:items-center min-h-0 min-w-0">
+                      <div className="flex items-baseline pr-3 lg:pr-4 mb-2 lg:mb-0 shrink-0">
+                        {currentRmssd !== null ? (
+                           <span className="font-mono text-[3rem] 2xl:text-[3.5rem] font-extralight text-[#001864] tracking-tight leading-none">{currentRmssd.toFixed(0)}</span>
+                        ) : (
+                           <span className="font-mono text-[3rem] 2xl:text-[3.5rem] font-extralight text-slate-300 tracking-tight leading-none animate-pulse">--</span>
+                        )}
+                        <span className="text-slate-500 font-medium text-lg leading-none ml-1 relative">ms</span>
+                      </div>
+                      <div className="flex-1 w-full h-full relative lg:border-l lg:border-slate-200/60 lg:pl-3 min-w-0 flex items-center border-t lg:border-t-0 pt-2 lg:pt-0">
+                        {sessionData.length > 1 ? (
+                          <ResponsiveContainer width="100%" height="80%">
+                            <LineChart data={sessionData.slice(-60)}>
+                              <YAxis hide domain={["dataMin - 10", "dataMax + 10"]} />
+                              <Line type="monotone" dataKey="rmssd" stroke="#3b82f6" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <>
+                            <div className="absolute top-1/2 left-3 right-0 border-t border-dashed border-slate-200 -translate-y-1/2 z-0" />
+                            <ResponsiveContainer width="100%" height="80%" className="opacity-15 animate-pulse relative z-10">
+                              <LineChart data={[{v:40},{v:45},{v:35},{v:50},{v:40},{v:45},{v:35}]}>
+                                <YAxis hide domain={[20,70]} />
+                                <Line type="basis" dataKey="v" stroke="#3b82f6" strokeWidth={2} dot={false} isAnimationActive={false} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPI 3: Task Speed */}
+                  <div className="glass-card p-4 flex flex-col relative overflow-hidden min-h-0 min-w-0">
+                    <p className="metric-label flex items-center justify-between shrink-0 mb-3 opacity-90">
+                      Task Speed <Zap className="w-4 h-4" />
+                    </p>
+                    <div className="flex-1 flex flex-col lg:flex-row lg:items-center min-h-0 min-w-0">
+                      <div className="flex items-baseline pr-3 lg:pr-4 mb-2 lg:mb-0 shrink-0">
+                        <span className="font-mono text-[3rem] 2xl:text-[3.5rem] font-extralight text-slate-300 tracking-tight leading-none animate-pulse">--</span>
+                        <span className="text-slate-500 font-medium text-lg leading-none ml-1 relative">op/m</span>
+                      </div>
+                      <div className="flex-1 w-full h-full relative lg:border-l lg:border-slate-200/60 lg:pl-3 min-w-0 flex items-center border-t lg:border-t-0 pt-2 lg:pt-0">
+                        <div className="absolute top-1/2 left-3 right-0 border-t border-dashed border-slate-200 -translate-y-1/2 z-0" />
+                        <ResponsiveContainer width="100%" height="80%" className="opacity-15 animate-pulse relative z-10">
+                            <LineChart data={[{v:1},{v:2},{v:1.5},{v:3},{v:2},{v:1.5},{v:2}]}>
+                              <YAxis hide domain={[0,4]} />
+                              <Line type="basis" dataKey="v" stroke="#94a3b8" strokeWidth={2} dot={false} isAnimationActive={false} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPI 4: Accuracy */}
+                  <div className="glass-card p-4 flex flex-col relative overflow-hidden min-h-0 min-w-0">
+                    <p className="metric-label flex items-center justify-between shrink-0 mb-3 opacity-90">
+                      Accuracy <Target className="w-4 h-4" />
+                    </p>
+                    <div className="flex-1 flex flex-col lg:flex-row lg:items-center min-h-0 min-w-0">
+                      <div className="flex items-baseline pr-3 lg:pr-4 mb-2 lg:mb-0 shrink-0">
+                        {totalSamples > 0 ? (
+                           <span className="font-mono text-[3rem] 2xl:text-[3.5rem] font-extralight text-emerald-600 tracking-tight leading-none">{accuracyPct}</span>
+                        ) : (
+                           <span className="font-mono text-[3rem] 2xl:text-[3.5rem] font-extralight text-slate-300 tracking-tight leading-none animate-pulse">--</span>
+                        )}
+                        <span className="text-slate-500 font-medium text-lg leading-none ml-1 relative">%</span>
+                      </div>
+                      <div className="flex-1 w-full h-full relative lg:border-l lg:border-slate-200/60 lg:pl-3 min-w-0 flex items-center border-t lg:border-t-0 pt-2 lg:pt-0">
+                        {sessionData.length > 1 ? (
+                          <ResponsiveContainer width="100%" height="80%">
+                            <LineChart data={sessionData.slice(-60).map(d => ({ ...d, acc: d.workload > -30 ? 100 : 0 }))}>
+                              <YAxis hide domain={[0, 100]} />
+                              <Line type="monotone" dataKey="acc" stroke="#10b981" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <>
+                            <div className="absolute top-1/2 left-3 right-0 border-t border-dashed border-slate-200 -translate-y-1/2 z-0" />
+                            <ResponsiveContainer width="100%" height="80%" className="opacity-15 animate-pulse relative z-10">
+                              <LineChart data={[{v:80},{v:90},{v:85},{v:100},{v:90},{v:85},{v:90}]}>
+                                <YAxis hide domain={[0,100]} />
+                                <Line type="basis" dataKey="v" stroke="#10b981" strokeWidth={2} dot={false} isAnimationActive={false} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1886,124 +2061,158 @@ export default function DashboardPage() {
             {/* ── CAMERA + BIO OVERLAY MODE ───────────────────────── */}
             {isCameraMode && (
               <div className="flex-1 relative overflow-hidden z-10">
-                {/* Video feed placeholder */}
-                <div className="absolute inset-0 camera-feed-placeholder">
-                  <div className="flex flex-col items-center gap-4">
-                    <Video className="w-16 h-16 text-white/15" />
-                    <p className="text-white/20 text-sm font-medium">POV Camera Feed</p>
-                    <p className="text-white/10 text-xs">Connect laparoscope camera to start streaming</p>
+                <video
+                  ref={attachCameraVideoRef}
+                  className="absolute inset-0 w-full h-full object-cover bg-black"
+                  autoPlay
+                  muted
+                  playsInline
+                  onLoadedData={() => setCameraStreamActive(true)}
+                  onPlaying={() => setCameraStreamActive(true)}
+                  onError={() => setCameraStreamActive(false)}
+                />
+                {!cameraStreamActive && (
+                  <div className="absolute inset-0 camera-feed-placeholder bg-slate-50">
+                    <div className="flex flex-col items-center gap-4">
+                      <Video className="w-16 h-16 text-slate-200" />
+                      <p className="text-slate-400 text-sm font-medium">POV Camera Feed</p>
+                      <p className="text-slate-300 text-xs text-center px-6">Connect laparoscope camera to start streaming</p>
+                      {cameraError && <p className="text-[11px] text-red-400 text-center px-6">{cameraError}</p>}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Floating HUD — Top Left: BPM */}
-                <div className="absolute top-5 left-5 glass-hud px-5 py-3 flex items-center gap-3 z-20">
-                  <Heart className="w-5 h-5 text-red-400" />
+                {/* Floating HUD — Top Left: Heart Rate + Stress Level */}
+                <div className="absolute top-6 left-6 glass-hud-white px-8 py-5 flex items-center gap-8 z-20">
                   <div>
-                    <span className="metric-value text-2xl text-white/90">{bpm !== null && bpm > 0 ? bpm : "--"}</span>
-                    <span className="text-xs text-white/40 ml-1">bpm</span>
+                    <p className="text-[11px] text-slate-500 uppercase tracking-widest font-bold mb-1">Heart Rate</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="metric-value text-4xl text-slate-800">{bpm !== null && bpm > 0 ? bpm : "--"}</span>
+                      <span className="text-[10px] text-slate-500 font-bold uppercase">bpm</span>
+                    </div>
                   </div>
-                </div>
-
-                {/* Floating HUD — Top Right: HRV Delta */}
-                <div className="absolute top-5 right-5 glass-hud px-5 py-3 flex items-center gap-3 z-20">
-                  <Activity className="w-4 h-4" style={{ color: stressColor }} />
+                  <div className="w-px h-12 bg-slate-200" />
                   <div>
-                    <span className="text-[10px] text-white/35 uppercase tracking-wider block">HRV Δ</span>
-                    <span className="metric-value text-2xl" style={{ color: stressColor }}>
-                      {hrvDelta !== null ? `${hrvDelta > 0 ? "+" : ""}${hrvDelta.toFixed(1)}%` : "--"}
+                    <p className="text-[11px] text-slate-500 uppercase tracking-widest font-bold mb-1">Stress Level</p>
+                    <span className="metric-value text-4xl" style={{ color: stressPct >= 66 ? "#ef4444" : stressPct >= 33 ? "#f59e0b" : "#3b579f" }}>
+                      {hrvDelta !== null ? `${stressPct}%` : "--"}
                     </span>
                   </div>
                 </div>
 
-                {/* Floating HUD — Bottom Left: Cognitive Load mini gauge */}
-                <div className="absolute bottom-20 left-5 glass-hud p-4 flex items-center gap-4 z-20">
-                  <div className="relative" style={{ width: 56, height: 56 }}>
-                    <svg viewBox="0 0 60 60" className="w-full h-full" style={{ transform: "rotate(160deg)" }}>
-                      <circle cx="30" cy="30" r="24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4"
-                        strokeDasharray={`${2 * Math.PI * 24 * (220 / 360)} ${2 * Math.PI * 24 * (140 / 360)}`} strokeLinecap="round" />
-                      <circle cx="30" cy="30" r="24" fill="none" stroke={gaugeColor} strokeWidth="4"
-                        strokeDasharray={`${2 * Math.PI * 24 * (220 / 360) * (cogLoadPct / 100)} ${2 * Math.PI * 24}`} strokeLinecap="round"
-                        style={{ transition: "stroke-dasharray 0.8s ease, stroke 0.6s ease", filter: gaugeGlow }} />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="metric-value text-sm" style={{ color: gaugeColor }}>{isCalibrated ? cogLoadPct : "--"}</span>
+                {/* Floating HUD — Bottom Left: HRV + Cognitive Load */}
+                <div className="absolute bottom-12 left-6 glass-hud-white px-8 py-5 flex items-center gap-8 z-20">
+                  <div>
+                    <p className="text-[11px] text-slate-500 uppercase tracking-widest font-bold mb-1">HRV (RMSSD)</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="metric-value text-4xl text-slate-800">{currentRmssd !== null ? currentRmssd.toFixed(0) : "--"}</span>
+                      <span className="text-[10px] text-slate-500 font-bold uppercase">ms</span>
                     </div>
                   </div>
+                  <div className="w-px h-12 bg-slate-200" />
                   <div>
-                    <p className="text-[10px] text-white/35 uppercase tracking-wider">Cognitive Load</p>
-                    <p className="text-xs font-semibold mt-0.5" style={{ color: gaugeColor }}>{zoneLabel}</p>
+                    <p className="text-[11px] text-slate-500 uppercase tracking-widest font-bold mb-1">Cognitive Load</p>
+                    <span className="metric-value text-4xl" style={{ color: gaugeColor }}>
+                      {isCalibrated ? `${cogLoadPct}%` : "--"}
+                    </span>
                   </div>
                 </div>
 
                 {/* Floating HUD — Bottom Right: Duration + Performance */}
-                <div className="absolute bottom-20 right-5 glass-hud px-5 py-3 flex items-center gap-5 z-20">
+                <div className="absolute bottom-12 right-6 glass-hud-white px-8 py-5 flex items-center gap-8 z-20">
                   <div>
-                    <p className="text-[10px] text-white/35 uppercase tracking-wider">Duration</p>
-                    <span className="metric-value text-2xl text-white/90">
+                    <p className="text-[11px] text-slate-500 uppercase tracking-widest font-bold mb-1">Duration</p>
+                    <span className="metric-value text-4xl text-slate-800">
                       {`${String(durMins).padStart(2, "0")}:${String(durSecs).padStart(2, "0")}`}
                     </span>
                   </div>
-                  <div className="w-px h-8" style={{ background: "rgba(255,255,255,0.1)" }} />
+                  <div className="w-px h-12 bg-slate-200" />
                   <div>
-                    <p className="text-[10px] text-white/35 uppercase tracking-wider">Performance</p>
-                    <span className="metric-value text-2xl" style={{ color: perfScore >= 70 ? "#34d399" : perfScore >= 40 ? "#fbbf24" : "#f87171" }}>
+                    <p className="text-[11px] text-slate-500 uppercase tracking-widest font-bold mb-1">Performance</p>
+                    <span className="metric-value text-4xl" style={{ color: perfScore >= 70 ? "#10b981" : perfScore >= 40 ? "#f59e0b" : "#ef4444" }}>
                       {totalSamples > 0 ? `${perfScore}%` : "--"}
                     </span>
                   </div>
                 </div>
 
                 {/* Bottom timeline strip */}
-                <div className="absolute bottom-0 left-0 right-0 timeline-strip px-6 py-2 z-20">
-                  <svg width="100%" height={32} viewBox={`0 0 ${tlW} 32`} preserveAspectRatio="none">
-                    {tlPoints && (
-                      <>
-                        <polygon points={`0,32 ${recentData.map((d, i) => {
-                          const x = (i / (recentData.length - 1)) * tlW;
-                          const y = 32 - Math.max(0, Math.min(32, ((d.workload + 100) / 200) * 32));
-                          return `${x},${y}`;
-                        }).join(" ")} ${tlW},32`} fill={`${gaugeColor}12`} />
-                        <polyline points={recentData.map((d, i) => {
-                          const x = (i / (recentData.length - 1)) * tlW;
-                          const y = 32 - Math.max(0, Math.min(32, ((d.workload + 100) / 200) * 32));
-                          return `${x},${y}`;
-                        }).join(" ")} fill="none" stroke={gaugeColor} strokeWidth="1.5" strokeLinejoin="round" style={{ filter: gaugeGlow }} />
-                      </>
-                    )}
-                  </svg>
+                <div className="absolute bottom-0 left-0 right-0 px-6 py-2 z-20" style={{ background: "rgba(255, 255, 255, 0.4)", borderTop: "1px solid rgba(0,0,0,0.05)", backdropFilter: "blur(8px)" }}>
+                  {recentData.length > 1 && (
+                    <svg width="100%" height={32} viewBox="0 0 800 32" preserveAspectRatio="none">
+                      <polygon points={`0,32 ${recentData.map((d, i) => {
+                        const x = (i / (recentData.length - 1)) * 800;
+                        const y = 32 - Math.max(0, Math.min(32, ((d.workload + 100) / 200) * 32));
+                        return `${x},${y}`;
+                      }).join(" ")} 800,32`} fill={`${gaugeColor}12`} />
+                      <polyline points={recentData.map((d, i) => {
+                        const x = (i / (recentData.length - 1)) * 800;
+                        const y = 32 - Math.max(0, Math.min(32, ((d.workload + 100) / 200) * 32));
+                        return `${x},${y}`;
+                      }).join(" ")} fill="none" stroke={gaugeColor} strokeWidth="1.5" strokeLinejoin="round" style={{ filter: gaugeGlow }} />
+                    </svg>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* ── BOTTOM TIMELINE STRIP (Biofeedback mode only) ─── */}
-            {!isCameraMode && (
-              <div className="relative z-10 timeline-strip px-6 py-3">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="metric-label">Session Timeline</p>
-                  <span className="text-[10px] text-white/25 font-mono tabular-nums">
-                    {`${String(durMins).padStart(2, "0")}:${String(durSecs).padStart(2, "0")}`}
-                  </span>
+            {isMinimalMode && (
+              <div className="flex-1 relative overflow-hidden z-10 bg-slate-100">
+                <video
+                  ref={attachCameraVideoRef}
+                  className="absolute inset-0 w-full h-full object-cover bg-black"
+                  autoPlay
+                  muted
+                  playsInline
+                  onLoadedData={() => setCameraStreamActive(true)}
+                  onPlaying={() => setCameraStreamActive(true)}
+                  onError={() => setCameraStreamActive(false)}
+                />
+                {!cameraStreamActive && (
+                  <div className="absolute inset-0 camera-feed-placeholder bg-slate-50">
+                    <div className="flex flex-col items-center gap-4">
+                      <Video className="w-16 h-16 text-slate-200" />
+                      <p className="text-slate-400 text-sm font-medium">POV Camera Feed</p>
+                      <p className="text-slate-300 text-xs text-center px-6">Connect laparoscope camera to start streaming</p>
+                      {cameraError && <p className="text-[11px] text-red-400 text-center px-6">{cameraError}</p>}
+                    </div>
+                  </div>
+                )}
+
+                <div className="absolute inset-0 z-20 pointer-events-none">
+                  <div title="Cognitive effort" className="absolute top-6 left-6 sm:top-8 sm:left-8">
+                    <Brain
+                      className="w-14 h-14 sm:w-16 sm:h-16"
+                      style={{
+                        color: gaugeColor,
+                        filter: `drop-shadow(0 0 18px ${gaugeColor}aa)`
+                      }}
+                    />
+                  </div>
+
+                  <div title="Stress" className="absolute top-6 right-6 sm:top-8 sm:right-8">
+                    <TrendingDown
+                      className="w-14 h-14 sm:w-16 sm:h-16"
+                      style={{
+                        color: stressTrafficColor,
+                        filter: `drop-shadow(0 0 18px ${stressTrafficColor}aa)`
+                      }}
+                    />
+                  </div>
+
+                  <div title="Performance" className="absolute bottom-7 right-6 sm:bottom-9 sm:right-8">
+                    <Target
+                      className="w-14 h-14 sm:w-16 sm:h-16"
+                      style={{
+                        color: perfTrafficColor,
+                        filter: `drop-shadow(0 0 18px ${perfTrafficColor}aa)`
+                      }}
+                    />
+                  </div>
                 </div>
-                <svg width="100%" height={36} viewBox={`0 0 ${tlW} 36`} preserveAspectRatio="none">
-                  <line x1="0" y1="18" x2={tlW} y2="18" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-                  {recentData.length > 1 && (() => {
-                    const pts = recentData.map((d, i) => {
-                      const x = (i / (recentData.length - 1)) * tlW;
-                      const y = 36 - Math.max(0, Math.min(36, ((d.workload + 100) / 200) * 36));
-                      return `${x},${y}`;
-                    });
-                    const polyStr = pts.join(" ");
-                    const fillStr = `0,36 ${polyStr} ${tlW},36`;
-                    return (
-                      <>
-                        <polygon points={fillStr} fill={`${gaugeColor}10`} />
-                        <polyline points={polyStr} fill="none" stroke={gaugeColor} strokeWidth="1.5"
-                          strokeLinejoin="round" strokeLinecap="round" style={{ filter: gaugeGlow }} />
-                      </>
-                    );
-                  })()}
-                </svg>
               </div>
             )}
+
+
           </main>
         );
       })()}
@@ -2024,7 +2233,7 @@ export default function DashboardPage() {
 
       {/* VIEW: REVIEW */}
       {viewState === "REVIEW" && (
-        <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 max-w-6xl mx-auto w-full">
+        <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 max-w-6xl mx-auto w-full overflow-y-auto">
           {renderReviewHeader()}
 
           {/* Session Metrics */}
