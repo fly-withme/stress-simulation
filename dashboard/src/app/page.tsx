@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { Wifi, WifiOff, Play, Square, Activity, LogOut, User, RefreshCw, Pause, Brain, Pencil, Check, X, Eye, Video, Heart, Timer, Shield, TrendingDown, Zap, Target, Leaf } from "lucide-react";
+import { Wifi, WifiOff, Play, Square, Activity, LogOut, User, RefreshCw, Pause, Brain, Pencil, Check, X, Eye, Video, Heart, Timer, Shield, TrendingDown, Zap, Target, Leaf, ArrowRight } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -116,6 +116,16 @@ export default function DashboardPage() {
   const wsRef = useRef<WebSocket | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
+  const reviewVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Sync external videoTime changes (like clicking on the chart) to the video player
+  useEffect(() => {
+    if (reviewVideoRef.current && viewState === "REVIEW") {
+      if (Math.abs(reviewVideoRef.current.currentTime - videoTime) > 0.5) {
+        reviewVideoRef.current.currentTime = videoTime;
+      }
+    }
+  }, [videoTime, viewState]);
 
   const attachCameraVideoRef = (el: HTMLVideoElement | null) => {
     cameraVideoRef.current = el;
@@ -127,14 +137,15 @@ export default function DashboardPage() {
   };
 
   const canStartLiveFlow = bleState === "connected" || isDevMode;
-  const hrvSensorReady = wsConnected && bleState === "connected";
+  const isHrvSignalActive = bpm !== null && bpm > 0;
+  const hrvSensorReady = wsConnected && bleState === "connected" && isHrvSignalActive;
   const pupilDilationSensorReady = eyeTrackerConnected && eyeTrackerCalibrated;
   const cameraSensorReady = boxCameraFeedActive || cameraStreamActive;
   const allCalibrationSensorsReady = hrvSensorReady && pupilDilationSensorReady && cameraSensorReady;
 
   // Browser camera stream for USB/webcam integration in live camera views.
   useEffect(() => {
-    const shouldUseCamera = viewState === "LIVE" && (liveMode === "camera" || liveMode === "minimal");
+    const shouldUseCamera = (viewState === "LIVE" && (liveMode === "camera" || liveMode === "minimal")) || viewState === "CALIBRATION_PENDING";
 
     const stopCameraStream = () => {
       if (cameraStreamRef.current) {
@@ -173,7 +184,7 @@ export default function DashboardPage() {
       try {
         if (cameraStreamRef.current) {
           bindStreamToVideo(cameraStreamRef.current);
-          setCameraStreamActive(false);
+          setCameraStreamActive(true);
           setCameraError(null);
           return;
         }
@@ -230,7 +241,7 @@ export default function DashboardPage() {
 
         cameraStreamRef.current = stream;
         bindStreamToVideo(stream);
-        setCameraStreamActive(false);
+        setCameraStreamActive(true);
         setCameraError(null);
       } catch (err) {
         console.error("Failed to access USB camera", err);
@@ -281,18 +292,24 @@ export default function DashboardPage() {
           // Finish Calibration Timer
           setCalibrationElapsed(CALIBRATION_DURATION_SEC);
           setIsCalibrationRunning(false);
-          setCalibrationCompleted(true);
           
           const allData = calibrationDataRef.current;
-          let avg = 60; // fallback
           if (allData.length > 0) {
-            avg = allData.reduce((acc, val) => acc + val, 0) / allData.length;
+            const avg = allData.reduce((acc, val) => acc + val, 0) / allData.length;
+            setBaselineRmssd(avg);
+            setSavedBaselineRmssd(avg);
+            
+            const emailKey = `calibration_baseline_${userId || 'anonymous'}`;
+            localStorage.setItem(emailKey, avg.toString());
+            setCalibrationCompleted(true);
+          } else {
+            // No valid data was collected (e.g. sensor disconnected)
+            alert("Kalibrierung fehlgeschlagen: Kein Sensorsignal empfangen. Bitte Sensor überprüfen und neu starten.");
+            setCalibrationElapsed(0);
+            calibrationDataRef.current = [];
+            setCalibrationData([]);
+            setCalibrationCompleted(false);
           }
-          setBaselineRmssd(avg);
-          setSavedBaselineRmssd(avg);
-          
-          const emailKey = `calibration_baseline_${userId || 'anonymous'}`;
-          localStorage.setItem(emailKey, avg.toString());
 
           if (wsRef.current?.readyState === WebSocket.OPEN) {
             wsRef.current.send(JSON.stringify({ command: "stop" }));
@@ -359,6 +376,7 @@ export default function DashboardPage() {
             // Handle Calibration Logging
             if (currentState === "CALIBRATION_ACTIVE" && newRmssd !== null && newRmssd > 0) {
               setCalibrationData((prev) => [...prev, newRmssd]);
+              calibrationDataRef.current.push(newRmssd);
             }
 
             // Handle Live Session Logging
@@ -430,7 +448,7 @@ export default function DashboardPage() {
   // Check for saved baseline and past sessions when user logs in
   useEffect(() => {
     if (session?.user?.email) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setUserId(session.user.email);
       const saved = localStorage.getItem(`calibration_baseline_${session.user.email}`);
 
@@ -493,6 +511,7 @@ export default function DashboardPage() {
 
   const startCalibration = () => {
     setCalibrationData([]);
+    calibrationDataRef.current = [];
     setCalibrationElapsed(0);
     setCalibrationCompleted(false);
     setIsCalibrationRunning(true);
@@ -557,6 +576,7 @@ export default function DashboardPage() {
       const formData = new FormData();
       formData.append('userId', userId || 'anonymous');
       formData.append('sessionData', JSON.stringify(sessionData));
+      formData.append('baselineRmssd', baselineRmssd !== null ? baselineRmssd.toString() : '');
       const defaultSessionName = `Session ${new Date().toLocaleDateString()}`;
       formData.append('sessionName', defaultSessionName);
 
@@ -718,7 +738,7 @@ export default function DashboardPage() {
       const x = -deltaPercent;
       knobPercentage = Math.max(0, ((x + 10) / 25) * 33);
     } else if (deltaPercent >= -30) {
-      workloadColor = "text-[#3b579f]";
+      workloadColor = "text-slate-600";
       workloadLabel = "High Effort";
       const x = -deltaPercent;
       knobPercentage = 33 + ((x - 15) / 15) * 33;
@@ -761,7 +781,11 @@ export default function DashboardPage() {
       let inStressEvent = false;
       sessionData.forEach((d) => {
         const deltaPercent = ((d.rmssd - baselineReference) / baselineReference) * 100;
-        if (deltaPercent < -30) {
+        const isHrvStress = deltaPercent < -30;
+        const isGoodCognitiveLoad = d.pupilSize === undefined || d.pupilSize < 3.5;
+        const isStress = isHrvStress && isGoodCognitiveLoad;
+
+        if (isStress) {
           if (!inStressEvent) {
             stressEventsCount++;
             inStressEvent = true;
@@ -801,6 +825,45 @@ export default function DashboardPage() {
       stressEventsCount,
     };
   }, [sessionData, currentReviewSession, reviewStats.duration, baselineRmssd]);
+
+  const timelineGradient = useMemo(() => {
+    if (sessionData.length < 2 || reviewStats.duration === 0) return 'none';
+    
+    const baselineReference = baselineRmssd && baselineRmssd > 0 
+      ? baselineRmssd 
+      : (currentReviewSession?.reviewStats?.avgRmssd || sessionData[0]?.rmssd || 0);
+
+    if (!baselineReference) return 'none';
+
+    const gradientStops: string[] = [];
+    let inStress = false;
+    
+    gradientStops.push(`#f1f5f9 0%`);
+
+    sessionData.forEach((d, i) => {
+      const deltaPercent = ((d.rmssd - baselineReference) / baselineReference) * 100;
+      const isHrvStress = deltaPercent < -30;
+      const isGoodCognitiveLoad = d.pupilSize === undefined || d.pupilSize < 3.5;
+      const currentIsStress = isHrvStress && isGoodCognitiveLoad;
+      
+      const percentPos = (d.timeOffset / reviewStats.duration) * 100;
+      
+      if (currentIsStress !== inStress) {
+        const color = currentIsStress ? 'rgba(239, 68, 68, 0.4)' : '#f1f5f9';
+        const prevColor = inStress ? 'rgba(239, 68, 68, 0.4)' : '#f1f5f9';
+        
+        gradientStops.push(`${prevColor} ${percentPos}%`);
+        gradientStops.push(`${color} ${percentPos}%`);
+        
+        inStress = currentIsStress;
+      }
+    });
+    
+    const finalColor = inStress ? 'rgba(239, 68, 68, 0.4)' : '#f1f5f9';
+    gradientStops.push(`${finalColor} 100%`);
+    
+    return `linear-gradient(to right, ${gradientStops.join(', ')})`;
+  }, [sessionData, reviewStats.duration, baselineRmssd, currentReviewSession]);
 
   const deltaRmssdTimeline = useMemo(() => {
     if (sessionData.length === 0) return [];
@@ -910,20 +973,29 @@ export default function DashboardPage() {
   }, [pastSessions]);
 
   const renderConnectionStatus = () => {
-    if (bleState === "scanning") {
+    if (hrvSensorReady) {
       return (
-        <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 bg-transparent border border-primary text-primary rounded-full font-semibold transition-all text-xs sm:text-sm">
-          <Activity className="w-4 h-4 text-primary animate-pulse" />
-          <span>Scanning for Belt...</span>
+        <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 bg-transparent border border-green-500 text-green-500 rounded-full font-semibold transition-all text-xs sm:text-sm">
+          <Wifi className="w-4 h-4 text-green-500" />
+          <span>Sensor Connected</span>
         </div>
       );
     }
 
-    if (wsConnected && bleState === "connected") {
+    if (bleState === "scanning") {
       return (
-        <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 bg-transparent border border-green-500 text-green-500 rounded-full font-semibold transition-all text-xs sm:text-sm">
-          <Wifi className="w-4 h-4 text-green-500" />
-          <span>Belt Connected</span>
+        <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 bg-transparent border border-primary text-primary rounded-full font-semibold transition-all text-xs sm:text-sm">
+          <Activity className="w-4 h-4 text-primary animate-pulse" />
+          <span>Scanning for Sensor...</span>
+        </div>
+      );
+    }
+
+    if (wsConnected && bleState === "connected" && !hrvSensorReady) {
+      return (
+        <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 bg-transparent border border-amber-500 text-amber-500 rounded-full font-semibold transition-all text-xs sm:text-sm">
+          <Activity className="w-4 h-4 text-amber-500 animate-pulse" />
+          <span>Waiting for Signal...</span>
         </div>
       );
     }
@@ -931,7 +1003,7 @@ export default function DashboardPage() {
     return (
       <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 bg-transparent border border-red-500 text-red-500 rounded-full font-semibold transition-all text-xs sm:text-sm">
         <WifiOff className="w-4 h-4 text-red-500" />
-        <span>Device disconnected</span>
+        <span>Sensor Disconnected</span>
         <button
           onClick={() => {
             console.log("[UI] Reconnect button clicked.");
@@ -1065,7 +1137,7 @@ export default function DashboardPage() {
   const showSidebar = ["OVERVIEW", "HISTORY", "SETTINGS", "REVIEW"].includes(viewState);
 
   return (
-    <div className={`h-screen text-primary font-sans flex relative overflow-hidden ${viewState === "LIVE" || viewState === "CALIBRATION_ACTIVE" ? "bg-[#020a1a]" : "bg-slate-50"}`}>
+    <div className="h-screen text-primary font-sans flex relative overflow-hidden bg-slate-50">
       {showSidebar && (
         <Sidebar 
           activeView={viewState === "REVIEW" ? "HISTORY" : viewState} 
@@ -1485,12 +1557,12 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">Bluetooth Devices</h3>
+                <h3 className="text-lg font-semibold text-slate-800 mb-4">Hardware Sensors</h3>
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
                   <div className="flex items-center gap-4">
                     <Activity className={`w-6 h-6 ${wsConnected && bleState === "connected" ? "text-green-500" : "text-slate-600"}`} />
                     <div>
-                      <div className="font-medium text-slate-800">Polar H10 Heart Rate Monitor</div>
+                      <div className="font-medium text-slate-800">HRV Sensor</div>
                       <div className="text-sm text-slate-500">
                         {wsConnected && bleState === "connected" ? "Connected" : "Disconnected"}
                       </div>
@@ -1543,36 +1615,40 @@ export default function DashboardPage() {
 
           <div className="w-full max-w-4xl mt-10">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 place-items-center">
-              <div className={`w-full max-w-60 min-h-34 rounded-3xl border p-8 flex items-center justify-center text-center text-lg font-semibold transition-all duration-300 ${cameraSensorReady ? "bg-primary text-white border-primary shadow-[0_10px_30px_rgba(0,24,100,0.18)]" : "bg-slate-50 text-slate-700 border-slate-200"}`}>
-                Camera
+              <div className={`w-full max-w-60 min-h-34 rounded-3xl border p-6 flex flex-col items-center justify-center text-center transition-all duration-300 ${cameraSensorReady ? "bg-primary text-white border-primary shadow-[0_10px_30px_rgba(0,24,100,0.18)]" : "bg-slate-50 text-slate-700 border-slate-200"}`}>
+                <span className="text-lg font-semibold mb-2">Camera</span>
+                {cameraSensorReady ? (
+                  <span className="text-xs font-medium px-2.5 py-1 box-border bg-white/20 rounded-md">Connected: Laparoscope</span>
+                ) : (
+                  <span className="text-xs font-medium text-slate-400">Waiting for device...</span>
+                )}
               </div>
-              <div className={`w-full max-w-60 min-h-34 rounded-3xl border p-8 flex items-center justify-center text-center text-lg font-semibold transition-all duration-300 ${pupilDilationSensorReady ? "bg-primary text-white border-primary shadow-[0_10px_30px_rgba(0,24,100,0.18)]" : "bg-slate-50 text-slate-700 border-slate-200"}`}>
-                Pupil Dilation
+              <div className={`w-full max-w-60 min-h-34 rounded-3xl border p-6 flex flex-col items-center justify-center text-center transition-all duration-300 ${pupilDilationSensorReady ? "bg-primary text-white border-primary shadow-[0_10px_30px_rgba(0,24,100,0.18)]" : "bg-slate-50 text-slate-700 border-slate-200"}`}>
+                <span className="text-lg font-semibold mb-2">Pupil Dilation</span>
+                {pupilDilationSensorReady ? (
+                  <span className="text-xs font-medium px-2.5 py-1 box-border bg-white/20 rounded-md">Connected: Eye Tracker</span>
+                ) : (
+                  <span className="text-xs font-medium text-slate-400">Waiting for device...</span>
+                )}
               </div>
-              <div className={`w-full max-w-60 min-h-34 rounded-3xl border p-8 flex items-center justify-center text-center text-lg font-semibold transition-all duration-300 ${hrvSensorReady ? "bg-primary text-white border-primary shadow-[0_10px_30px_rgba(0,24,100,0.18)]" : "bg-slate-50 text-slate-700 border-slate-200"}`}>
-                HRV
+              <div className={`w-full max-w-60 min-h-34 rounded-3xl border p-6 flex flex-col items-center justify-center text-center transition-all duration-300 ${hrvSensorReady ? "bg-primary text-white border-primary shadow-[0_10px_30px_rgba(0,24,100,0.18)]" : "bg-slate-50 text-slate-700 border-slate-200"}`}>
+                <span className="text-lg font-semibold mb-2">HRV Sensor</span>
+                {hrvSensorReady ? (
+                  <span className="text-xs font-medium px-2.5 py-1 box-border bg-white/20 rounded-md">Connected: Serial ECG</span>
+                ) : (
+                  <span className="text-xs font-medium text-slate-400">Waiting for device...</span>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 min-h-24">
-            {allCalibrationSensorsReady && (
-              <button
-                onClick={() => openCalibrationRunView()}
-                className="px-10 py-3.5 rounded-full bg-primary hover:bg-primary-hover text-white font-semibold transition-colors cursor-pointer"
-              >
-                Continue
-              </button>
-            )}
-
-            {isDevMode && !allCalibrationSensorsReady && (
-              <button
-                onClick={() => openCalibrationRunView(true)}
-                className="px-8 py-3 rounded-full border border-primary/40 text-primary hover:bg-primary/10 font-semibold transition-colors cursor-pointer"
-              >
-                Bypass Device Check (Dev Mode)
-              </button>
-            )}
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 min-h-24">
+            <button
+              onClick={() => openCalibrationRunView(true)}
+              className="px-10 py-3.5 rounded-full bg-primary hover:bg-primary-hover text-white font-semibold transition-colors cursor-pointer"
+            >
+              Continue to Calibration
+            </button>
           </div>
         </main>
       )}
@@ -1580,34 +1656,19 @@ export default function DashboardPage() {
       {/* VIEW: CALIBRATION GOING */}
       {viewState === "CALIBRATION_ACTIVE" && (
         <main
-          className="flex-1 w-full flex flex-col items-center justify-center relative overflow-hidden"
-          style={{ background: "radial-gradient(ellipse 90% 70% at 50% 60%, #0d1e4a 0%, #000a1f 100%)" }}
+          className="flex-1 w-full flex flex-col items-center justify-center relative overflow-hidden bg-slate-50"
         >
           {/* Skip Button */}
           <button
             onClick={() => beginLiveSession()}
-            className="absolute top-8 right-8 z-50 p-3 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
+            className="absolute top-8 right-8 z-50 p-3 rounded-full hover:bg-slate-200 text-slate-400 hover:text-primary transition-all cursor-pointer"
             title="Skip Calibration"
           >
             <X className="w-6 h-6" />
           </button>
 
-          {/* Ambient background glow */}
-          <div
-            className="pointer-events-none absolute"
-            style={{
-              width: 700,
-              height: 700,
-              borderRadius: "9999px",
-              background: "radial-gradient(circle, rgba(127,158,207,0.07) 0%, transparent 70%)",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-            }}
-          />
-
           {/* Top label */}
-          <p className="relative z-10 text-slate-400 text-xs tracking-[0.25em] uppercase font-semibold mb-14 select-none">
+          <p className="relative z-10 text-primary text-xs tracking-[0.25em] uppercase font-semibold mb-14 select-none">
             Baseline Calibration
           </p>
 
@@ -1621,7 +1682,7 @@ export default function DashboardPage() {
           {/* Phase label */}
           <div className="relative z-10 mt-12 flex flex-col items-center gap-3 select-none">
             <p
-              className="text-white text-2xl font-light tracking-widest transition-opacity duration-500"
+              className="text-primary text-2xl font-semibold tracking-widest transition-opacity duration-500"
               style={{ fontFamily: "inherit", letterSpacing: "0.18em" }}
             >
               {breathingPhaseLabel}
@@ -1642,7 +1703,7 @@ export default function DashboardPage() {
                     style={{
                       width: 5,
                       height: 5,
-                      background: active ? "#c9def7" : "rgba(127,158,207,0.25)",
+                      background: active ? "#001864" : "rgba(0, 24, 100, 0.15)",
                       transform: active ? "scale(1.3)" : "scale(1)",
                     }}
                   />
@@ -1652,41 +1713,51 @@ export default function DashboardPage() {
           </div>
 
           {/* Session progress text */}
-          <p className="relative z-10 mt-6 text-slate-500 text-sm tabular-nums tracking-wider select-none">
-            {isCalibrationRunning
-              ? `${calibrationElapsed}s / ${CALIBRATION_DURATION_SEC}s`
-              : "Press Start when ready"}
-          </p>
+          {calibrationCompleted ? (
+            <div className="relative z-10 mt-6 flex flex-col items-center gap-2">
+              <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-xs font-bold uppercase tracking-wider rounded-lg border border-emerald-200 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> Calibration Successful</span>
+              <p className="text-slate-600 text-sm tracking-wider mt-2">
+                Baseline RMSSD recorded: <span className="text-primary font-mono font-semibold text-lg ml-1">{baselineRmssd !== null ? baselineRmssd.toFixed(1) : "--"} ms</span>
+              </p>
+            </div>
+          ) : (
+            <p className="relative z-10 mt-6 text-slate-500 text-sm tabular-nums tracking-wider select-none">
+              {isCalibrationRunning
+                ? `${calibrationElapsed}s / ${CALIBRATION_DURATION_SEC}s`
+                : "Press Start when ready"}
+            </p>
+          )}
 
           {/* Controls */}
           <div className="relative z-10 mt-10 flex items-center gap-4">
-            {!isCalibrationRunning && (
+            {!isCalibrationRunning && !calibrationCompleted && (
               <button
                 onClick={startCalibration}
-                className="flex items-center gap-2.5 px-8 py-3 rounded-full font-semibold text-sm transition-all cursor-pointer"
-                style={{
-                  background: "rgba(201,222,247,0.15)",
-                  border: "1.5px solid rgba(201,222,247,0.35)",
-                  color: "#c9def7",
-                  backdropFilter: "blur(8px)",
-                }}
+                className="flex items-center gap-2.5 px-8 py-3 rounded-full font-semibold text-sm transition-all cursor-pointer bg-primary hover:bg-primary-hover text-white shadow-md hover:shadow-lg"
               >
                 <Play className="w-4 h-4" />
                 Start
               </button>
             )}
-            <button
-              onClick={resetCalibration}
-              disabled={!isCalibrationRunning && calibrationElapsed === 0}
-              className="flex items-center gap-2.5 px-8 py-3 rounded-full font-semibold text-sm transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{
-                background: "transparent",
-                border: "1.5px solid rgba(127,158,207,0.2)",
-                color: "rgba(127,158,207,0.7)",
-              }}
-            >
-              Reset
-            </button>
+
+            {calibrationCompleted && (
+              <button
+                onClick={() => beginLiveSession()}
+                className="flex items-center gap-2.5 px-8 py-3 rounded-full font-semibold text-sm transition-all cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white shadow-md hover:shadow-lg"
+              >
+                Continue to Dashboard
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+
+            {isCalibrationRunning && (
+              <button
+                onClick={resetCalibration}
+                className="flex items-center gap-2.5 px-8 py-3 rounded-full font-semibold text-sm transition-all cursor-pointer border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Reset
+              </button>
+            )}
           </div>
         </main>
       )}
@@ -1746,6 +1817,11 @@ export default function DashboardPage() {
               <div className="flex items-center gap-3">
                 <span className="live-dot" />
                 <span className="text-slate-800 text-sm font-semibold tracking-widest uppercase select-none">Live Session</span>
+                {hrvSensorReady && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-emerald-50 text-emerald-600 border border-emerald-200">
+                    HRV
+                  </span>
+                )}
                 {isSessionPaused && (
                   <span className="ml-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase" style={{ background: "rgba(251,191,36,0.15)", color: "#d97706", border: "1px solid rgba(251,191,36,0.3)" }}>Paused</span>
                 )}
@@ -1823,7 +1899,7 @@ export default function DashboardPage() {
                 {/* ZONE A: CORE STATE HERO (Top 60%) */}
                 <div className="glass-card flex p-6 relative overflow-hidden shrink-0" style={{ height: "56%" }}>
                   {/* Gauges Column */}
-                  <div className="flex flex-col w-[35%] min-w-[280px] border-r border-slate-200/40 pr-8 gap-4 min-h-0">
+                  <div className="flex flex-col w-[35%] min-w-70 border-r border-slate-200/40 pr-8 gap-4 min-h-0">
                     <p className="metric-label flex items-center justify-between shrink-0 mb-2">
                        Core State Synthesis <Brain className="w-4 h-4 text-slate-500" />
                     </p>
@@ -2233,211 +2309,285 @@ export default function DashboardPage() {
 
       {/* VIEW: REVIEW */}
       {viewState === "REVIEW" && (
-        <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 max-w-6xl mx-auto w-full overflow-y-auto">
+        <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 max-w-7xl mx-auto w-full overflow-y-auto">
           {renderReviewHeader()}
 
-          {/* Session Metrics */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-            <div className="bg-slate-50/50 border border-slate-200 rounded-2xl p-6">
-              <div className="text-slate-500 text-sm uppercase tracking-wider mb-2">Average Time on Task</div>
-              <div className="text-3xl font-semibold text-primary">{formatSeconds(reviewKpis.avgTimeOnTaskSecs)}</div>
-            </div>
-            <div className="bg-slate-50/50 border border-slate-200 rounded-2xl p-6">
-              <div className="text-slate-500 text-sm uppercase tracking-wider mb-2">Detected Stress Events</div>
-              <div className="text-3xl font-semibold text-primary">{reviewKpis.stressEventsCount}</div>
-            </div>
-            <div className="bg-slate-50/50 border border-slate-200 rounded-2xl p-6">
-              <div className="text-slate-500 text-sm uppercase tracking-wider mb-2">Error Rate</div>
-              <div className="text-3xl font-semibold text-primary">{reviewKpis.errorRate.toFixed(1)}%</div>
-            </div>
-            <div className="bg-slate-50/50 border border-slate-200 rounded-2xl p-6">
-              <div className="text-slate-500 text-sm uppercase tracking-wider mb-2">Average Heart Rate</div>
-              <div className="text-3xl font-semibold text-primary">{reviewKpis.averageHeartRate > 0 ? `${reviewKpis.averageHeartRate.toFixed(0)} BPM` : "--"}</div>
-            </div>
-          </div>
-
-          <div className="mb-8">
-            <PerformanceSummary
-              accuracyPercent={reviewKpis.accuracyPercent}
-              speedPercent={reviewKpis.speedPercent}
-              performanceScore={reviewKpis.performanceScore}
-            />
-          </div>
-
-          {/* Delta RMSSD Timeline */}
-          <div className="bg-slate-50/50 border border-slate-200 rounded-3xl p-5 sm:p-8 mb-4 order-3 relative overflow-hidden flex-1 w-full">
-            <div className="absolute top-0 w-full h-1 bg-linear-to-r from-transparent via-primary to-transparent opacity-20 -mx-8"></div>
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-800">Delta RMSSD Timeline</h3>
-                <p className="text-sm text-slate-600 mt-1">
-                  Heart rate variability change across the session.
-                </p>
+          {/* Top Row: KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {/* Session Overall Score */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm col-span-1 md:col-span-1 flex flex-col justify-center">
+              <div className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-2">Session Overall Score</div>
+              <div className="flex items-center gap-4 mb-2">
+                <span className="text-4xl font-extrabold text-slate-800">{reviewKpis.performanceScore.toFixed(0)}%</span>
+                <div className="flex-1 bg-slate-200 h-4 rounded-full overflow-hidden">
+                  <div className="bg-slate-500 h-full rounded-full" style={{ width: `${reviewKpis.performanceScore}%` }} />
+                </div>
+              </div>
+              <div className="text-[10px] text-slate-500 flex flex-col">
+                <span>Accuracy: {reviewKpis.accuracyPercent.toFixed(0)}%</span>
+                <span>Speed: {reviewKpis.speedPercent.toFixed(0)}%</span>
               </div>
             </div>
-            <div className="h-64 w-full">
-              {deltaRmssdTimeline.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={deltaRmssdTimeline}
-                    style={{ outline: "none" }}
-                    onClick={(state) => {
-                      const clickedTime = typeof state?.activeLabel === "number" ? state.activeLabel : Number(state?.activeLabel);
-                      if (Number.isNaN(clickedTime)) return;
 
-                      setVideoTime(clickedTime);
-                    }}
-                  >
-                    <XAxis
-                      type="number"
-                      domain={['dataMin', 'dataMax']}
-                      dataKey="timeOffset"
-                      stroke="#5f6f94"
-                      tickFormatter={(value) => formatSeconds(value as number)}
-                      minTickGap={30}
-                    />
-                    <YAxis
-                      stroke="#5f6f94"
-                      tickFormatter={(value) => `${(value as number).toFixed(0)}%`}
-                    />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "#f8fbff", borderColor: "#c9def7", borderRadius: "8px", color: "#001864" }}
-                      labelStyle={{ color: "#001864" }}
-                      formatter={(value) => [`${Number(value ?? 0).toFixed(1)}%`, "Delta RMSSD"]}
-                      labelFormatter={(label) => `Time ${formatSeconds(Number(label ?? 0))}`}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="deltaRmssd"
-                      stroke="#001864"
-                      strokeWidth={2.5}
-                      dot={false}
-                      activeDot={{ r: 5, fill: "#001864" }}
-                    />
-                    <ReferenceLine
-                      x={videoTime}
-                      stroke="#7f9ecf"
-                      strokeWidth={2}
-                      strokeDasharray="3 3"
-                      ifOverflow="extendDomain"
-                      label={{ value: formatSeconds(videoTime), position: "top", fill: "#3b579f", fontSize: 12, fontWeight: 500 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-slate-500">No RMSSD timeline data available.</div>
-              )}
+            {/* Total Time */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-center items-center text-center">
+              <div className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-2 w-full text-left">Total Time</div>
+              <div className="text-4xl font-bold text-slate-800 flex-1 flex items-center justify-center">{formatSeconds(reviewStats.duration)}</div>
+            </div>
+
+            {/* Peak Stress Level */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-center items-center text-center relative overflow-hidden">
+              <div className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-2 w-full text-left">Peak Stress Level</div>
+              <div className="flex-1 flex items-center justify-center relative w-full mt-2">
+                 {(() => {
+                    const baselineReference = baselineRmssd && baselineRmssd > 0 
+                      ? baselineRmssd 
+                      : (currentReviewSession?.reviewStats?.avgRmssd || sessionData[0]?.rmssd || 0);
+                    if (!baselineReference || sessionData.length === 0) return <span className="text-2xl text-slate-400">--</span>;
+                    const maxStressDrop = Math.min(...sessionData.map(d => ((d.rmssd - baselineReference) / baselineReference) * 100));
+                    const stressPct = maxStressDrop > 0 ? 0 : Math.round(Math.min(100, (Math.abs(maxStressDrop) / 30) * 100));
+                    const rotation = -90 + (stressPct / 100) * 180;
+                    return (
+                      <div className="relative w-32 h-16 overflow-hidden">
+                        <div className="absolute top-0 left-0 w-32 h-32 rounded-full border-12 border-slate-200 border-b-transparent border-r-transparent transform -rotate-45" />
+                        <div className="absolute top-0 left-0 w-32 h-32 rounded-full border-12 border-slate-500 border-b-transparent border-r-transparent transform -rotate-45" style={{ clipPath: `polygon(0 0, 100% 0, 100% ${stressPct}%, 0 ${stressPct}%)` }} />
+                        <div className="absolute bottom-0 left-1/2 w-1.5 h-12 bg-slate-800 origin-bottom transform transition-transform" style={{ transform: `translateX(-50%) rotate(${rotation}deg)` }} />
+                        <div className="absolute -bottom-1 left-1/2 w-3 h-3 bg-slate-800 rounded-full transform -translate-x-1/2" />
+                        <div className="absolute bottom-0 left-2 text-[10px] font-bold text-slate-400">Low</div>
+                        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 text-[10px] font-bold text-slate-400">Med</div>
+                        <div className="absolute bottom-0 right-2 text-[10px] font-bold text-slate-400">High</div>
+                      </div>
+                    );
+                 })()}
+              </div>
+            </div>
+
+            {/* Peak Cognitive Load */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-center items-center text-center relative overflow-hidden">
+              <div className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-2 w-full text-left">Peak Cognitive Load</div>
+              <div className="flex-1 flex items-center justify-center relative w-full mt-2">
+                 {(() => {
+                    if (sessionData.length === 0) return <span className="text-2xl text-slate-400">--</span>;
+                    const peakLoad = Math.max(...sessionData.map(d => d.workload));
+                    const loadPct = Math.max(0, Math.min(100, ((peakLoad + 50) / 150) * 100));
+                    const rotation = -90 + (loadPct / 100) * 180;
+                    return (
+                      <div className="relative w-32 h-16 overflow-hidden">
+                        <div className="absolute top-0 left-0 w-32 h-32 rounded-full border-12 border-slate-200 border-b-transparent border-r-transparent transform -rotate-45" />
+                        <div className="absolute top-0 left-0 w-32 h-32 rounded-full border-12 border-slate-500 border-b-transparent border-r-transparent transform -rotate-45" style={{ clipPath: `polygon(0 0, 100% 0, 100% ${loadPct}%, 0 ${loadPct}%)` }} />
+                        <div className="absolute bottom-0 left-1/2 w-1.5 h-12 bg-slate-800 origin-bottom transform transition-transform" style={{ transform: `translateX(-50%) rotate(${rotation}deg)` }} />
+                        <div className="absolute -bottom-1 left-1/2 w-3 h-3 bg-slate-800 rounded-full transform -translate-x-1/2" />
+                        <div className="absolute bottom-0 left-2 text-[10px] font-bold text-slate-400">Low</div>
+                        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 text-[10px] font-bold text-slate-400">Med</div>
+                        <div className="absolute bottom-0 right-2 text-[10px] font-bold text-slate-400">High</div>
+                      </div>
+                    );
+                 })()}
+              </div>
             </div>
           </div>
 
-          {/* Cognitive Effort Timeline */}
-          <div className="bg-slate-50/50 border border-slate-200 rounded-3xl p-5 sm:p-8 mb-4 order-2 relative overflow-hidden flex-1 w-full">
-            <div className="absolute top-0 w-full h-1 bg-linear-to-r from-transparent via-primary to-transparent opacity-20 -mx-8"></div>
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-800">Cognitive Effort Timeline</h3>
-                <p className="text-sm text-slate-600 mt-1">
-                  Estimated cognitive load derived from Delta RMSSD.
-                </p>
+          {/* Middle Row: Video, Charts, Events */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+            {/* Left: Video Player */}
+            <div className="lg:col-span-5 flex flex-col gap-4">
+              <div className="glass-card overflow-hidden bg-black aspect-video relative group border border-slate-200 shadow-sm rounded-2xl">
+                <video
+                  ref={(el) => {
+                    reviewVideoRef.current = el;
+                    if (el) {
+                      // Synchronize video current time with videoTime state if changed externally
+                      if (Math.abs(el.currentTime - videoTime) > 0.5) {
+                        el.currentTime = videoTime;
+                      }
+                    }
+                  }}
+                  src={`/api/sessions/video?userId=${encodeURIComponent(userId || 'anonymous')}&sessionId=${encodeURIComponent(currentReviewSession?.sessionId || '')}`}
+                  className="w-full h-full object-contain"
+                  onTimeUpdate={(e) => setVideoTime(e.currentTarget.currentTime)}
+                  controls
+                />
+                {!currentReviewSession?.sessionId && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 text-white p-6 text-center">
+                    <Video className="w-12 h-12 mb-4 opacity-20" />
+                    <p className="text-sm font-medium opacity-60">Recording not available for this session</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Custom Scrubber / Timeline Wrapper */}
+              <div className="glass-card p-4 bg-white border border-slate-200 rounded-2xl">
+                <div className="flex items-center justify-between text-xs font-mono text-slate-500 mb-2">
+                  <span>{formatSeconds(videoTime)}</span>
+                  <span>{formatSeconds(reviewStats.duration)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={reviewStats.duration}
+                  step={0.1}
+                  value={videoTime}
+                  onChange={(e) => {
+                    const newTime = Number(e.target.value);
+                    setVideoTime(newTime);
+                    if (reviewVideoRef.current) reviewVideoRef.current.currentTime = newTime;
+                  }}
+                  className="w-full h-2 rounded-lg appearance-none accent-slate-600 cursor-pointer border border-slate-300"
+                  style={{ background: timelineGradient !== 'none' ? timelineGradient : '#f1f5f9' }}
+                />
               </div>
             </div>
-            <div className="h-64 w-full">
-              {deltaRmssdTimeline.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={deltaRmssdTimeline}
-                    style={{ outline: "none" }}
-                    onClick={(state) => {
-                      const clickedTime = typeof state?.activeLabel === "number" ? state.activeLabel : Number(state?.activeLabel);
-                      if (Number.isNaN(clickedTime)) return;
 
-                      setVideoTime(clickedTime);
-                    }}
-                  >
-                    <XAxis
-                      type="number"
-                      domain={['dataMin', 'dataMax']}
-                      dataKey="timeOffset"
-                      stroke="#5f6f94"
-                      tickFormatter={(value) => formatSeconds(value as number)}
-                      minTickGap={30}
-                    />
-                    <YAxis
-                      stroke="#5f6f94"
-                      tickFormatter={(value) => `${(value as number).toFixed(0)}`}
-                    />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "#f8fbff", borderColor: "#c9def7", borderRadius: "8px", color: "#001864" }}
-                      labelStyle={{ color: "#001864" }}
-                      formatter={(value) => [`${Number(value ?? 0).toFixed(1)}`, "Cognitive Effort"]}
-                      labelFormatter={(label) => `Time ${formatSeconds(Number(label ?? 0))}`}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="cognitiveEffort"
-                      stroke="#3b579f"
-                      strokeWidth={2.5}
-                      dot={false}
-                      activeDot={{ r: 5, fill: "#3b579f" }}
-                    />
-                    <ReferenceLine
-                      x={videoTime}
-                      stroke="#7f9ecf"
-                      strokeWidth={2}
-                      strokeDasharray="3 3"
-                      ifOverflow="extendDomain"
-                      label={{ value: formatSeconds(videoTime), position: "top", fill: "#3b579f", fontSize: 12, fontWeight: 500 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-slate-500">No cognitive effort data available.</div>
-              )}
+            {/* Middle: Timelines */}
+            <div className="lg:col-span-4 flex flex-col gap-4">
+               {/* Stress Timeline (HRV) */}
+               <div className="flex-1 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm relative overflow-hidden flex flex-col">
+                  <div className="mb-2 flex items-center justify-between shrink-0">
+                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Stress Timeline (HRV)</h3>
+                    <Heart className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                  <div className="flex-1 w-full min-h-25 relative">
+                    <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-[9px] text-slate-400 font-medium py-2 z-10 pointer-events-none">
+                      <span>Stressed</span>
+                      <span>Focused</span>
+                      <span>Relaxed</span>
+                    </div>
+                    {deltaRmssdTimeline.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={deltaRmssdTimeline}
+                          margin={{ top: 10, right: 10, left: 40, bottom: 0 }}
+                          onClick={(state) => {
+                            const clickedTime = typeof state?.activeLabel === "number" ? state.activeLabel : Number(state?.activeLabel);
+                            if (!Number.isNaN(clickedTime)) {
+                               setVideoTime(clickedTime);
+                               if (reviewVideoRef.current) reviewVideoRef.current.currentTime = clickedTime;
+                            }
+                          }}
+                        >
+                          <XAxis type="number" domain={['dataMin', 'dataMax']} dataKey="timeOffset" hide />
+                          <YAxis hide domain={[-50, 50]} />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "11px", color: "#1e293b", padding: "4px 8px" }}
+                            labelFormatter={(l) => `Time: ${formatSeconds(Number(l))}`}
+                          />
+                          <Line type="monotone" dataKey="deltaRmssd" stroke="#334155" strokeWidth={2} dot={false} isAnimationActive={false} />
+                          <ReferenceLine x={videoTime} stroke="#ef4444" strokeWidth={1.5} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-slate-400 text-xs pl-10">No timeline data</div>
+                    )}
+                  </div>
+               </div>
+               
+               {/* Cognitive Load Timeline */}
+               <div className="flex-1 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm relative overflow-hidden flex flex-col">
+                  <div className="mb-2 flex items-center justify-between shrink-0">
+                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Cognitive Load (Pupil Dilation)</h3>
+                    <Brain className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                  <div className="flex-1 w-full min-h-25 relative">
+                    <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-[9px] text-slate-400 font-medium py-2 z-10 pointer-events-none">
+                      <span>Overload</span>
+                      <span>High</span>
+                      <span>Optimal</span>
+                      <span>Low</span>
+                    </div>
+                    {deltaRmssdTimeline.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={deltaRmssdTimeline}
+                          margin={{ top: 10, right: 10, left: 40, bottom: 0 }}
+                          onClick={(state) => {
+                            const clickedTime = typeof state?.activeLabel === "number" ? state.activeLabel : Number(state?.activeLabel);
+                            if (!Number.isNaN(clickedTime)) {
+                               setVideoTime(clickedTime);
+                               if (reviewVideoRef.current) reviewVideoRef.current.currentTime = clickedTime;
+                            }
+                          }}
+                        >
+                          <XAxis type="number" domain={['dataMin', 'dataMax']} dataKey="timeOffset" hide />
+                          <YAxis hide domain={[-500, 500]} />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "11px", color: "#1e293b", padding: "4px 8px" }}
+                            labelFormatter={(l) => `Time: ${formatSeconds(Number(l))}`}
+                          />
+                          <Line type="monotone" dataKey="cognitiveEffort" stroke="#334155" strokeWidth={2} dot={false} isAnimationActive={false} />
+                          <ReferenceLine x={videoTime} stroke="#ef4444" strokeWidth={1.5} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-slate-400 text-xs pl-10">No workload data</div>
+                    )}
+                  </div>
+               </div>
+            </div>
+
+            {/* Right: Event Analysis */}
+            <div className="lg:col-span-3 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col h-full max-h-100">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-1">Event Analysis</h3>
+              <p className="text-xs text-slate-500 mb-4">Click links to jump to video moments.</p>
+              
+              <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-slate-200">
+                {(() => {
+                  const baselineReference = baselineRmssd && baselineRmssd > 0 
+                    ? baselineRmssd 
+                    : (currentReviewSession?.reviewStats?.avgRmssd || sessionData[0]?.rmssd || 0);
+
+                  if (!baselineReference || sessionData.length === 0) return <div className="text-sm text-slate-400">No events detected</div>;
+
+                  const events: { time: number; type: string }[] = [];
+                  let inStress = false;
+
+                  sessionData.forEach((d) => {
+                    const deltaPercent = ((d.rmssd - baselineReference) / baselineReference) * 100;
+                    const isHrvStress = deltaPercent < -30;
+                    const isGoodCognitiveLoad = d.pupilSize === undefined || d.pupilSize < 3.5;
+                    const currentIsStress = isHrvStress && isGoodCognitiveLoad;
+
+                    if (currentIsStress && !inStress) {
+                      events.push({ time: d.timeOffset, type: "High Stress Detected" });
+                      inStress = true;
+                    } else if (!currentIsStress) {
+                      inStress = false;
+                    }
+                  });
+
+                  if (events.length === 0) return <div className="text-sm text-slate-400 mt-4 text-center">No significant stress events detected.</div>;
+
+                  return events.map((ev, i) => (
+                    <div key={i} className="flex flex-col border-l-2 border-slate-300 hover:border-slate-500 pl-3 py-1 transition-colors">
+                      <button 
+                        onClick={() => {
+                          setVideoTime(ev.time);
+                          if (reviewVideoRef.current) reviewVideoRef.current.currentTime = ev.time;
+                        }}
+                        className="text-slate-600 hover:text-[#001864] hover:underline text-left text-sm font-medium transition-colors"
+                      >
+                        {formatSeconds(ev.time)} - {ev.type}
+                      </button>
+                      <span className="text-[10px] text-slate-500 mt-0.5">Jump to video and graphs</span>
+                    </div>
+                  ));
+                })()}
+              </div>
             </div>
           </div>
 
-          {/* Pupil Size Timeline */}
-          <div className="bg-slate-50/50 border border-slate-200 rounded-3xl p-5 sm:p-8 mb-4 order-4 relative overflow-hidden flex-1 w-full">
-            <div className="absolute top-0 w-full h-1 bg-linear-to-r from-transparent via-emerald-500 to-transparent opacity-20 -mx-8"></div>
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-800">Percentage Change in Pupil Size</h3>
-                <p className="text-sm text-slate-600 mt-1">
-                  Pupil dilation variance across the session.
-                </p>
-              </div>
-            </div>
-            <div className="h-64 w-full">
-              <div className="h-full flex items-center justify-center text-slate-500">No pupil size data available yet.</div>
-            </div>
-          </div>
-
-          {/* Session timeline navigator */}
-          <div className="bg-slate-50/50 border border-slate-200 rounded-3xl p-5 sm:p-8 mb-10 order-1 relative flex-1 w-full">
-            <div className="mb-5">
-              <h3 className="text-lg font-semibold text-slate-800">Session Timeline</h3>
-              <p className="text-sm text-slate-600 mt-1">
-                Move through the session timeline to align all charts to a specific moment.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
-              <div className="flex items-center justify-between text-sm text-slate-600 mb-3">
-                <span>{formatSeconds(videoTime)}</span>
-                <span>
-                  {formatSeconds(sessionData.length > 0 ? sessionData[sessionData.length - 1].timeOffset : 0)}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={sessionData.length > 0 ? sessionData[sessionData.length - 1].timeOffset : 0}
-                step={1}
-                value={Math.min(videoTime, sessionData.length > 0 ? sessionData[sessionData.length - 1].timeOffset : 0)}
-                onChange={(e) => setVideoTime(Number(e.target.value))}
-                disabled={sessionData.length === 0}
-                className="w-full h-2 rounded-lg appearance-none bg-secondary accent-primary disabled:opacity-50"
-              />
+          {/* Bottom Row: Actionable Feedback & Recommendations */}
+          <div className="bg-[#f8fafc] border border-slate-200 rounded-2xl p-6 shadow-sm mb-4">
+            <h3 className="text-sm font-bold tracking-tight text-slate-800 mb-4 uppercase">Actionable Feedback & Recommendations</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <ul className="list-disc pl-5 text-sm text-slate-700 space-y-3">
+                 <li><span className="font-semibold text-slate-900">Performance:</span> Maintain steady pace. Accuracy is {reviewKpis.accuracyPercent >= 90 ? "excellent" : "good"}, focus on economy of movement.</li>
+                 {reviewKpis.stressEventsCount > 0 ? (
+                   <li><span className="font-semibold text-slate-900">Stress Management:</span> Practice controlled breathing before complex tasks. We detected {reviewKpis.stressEventsCount} high-stress events.</li>
+                 ) : (
+                   <li><span className="font-semibold text-slate-900">Stress Management:</span> Excellent stress control during the entire session. Keep it up!</li>
+                 )}
+                 <li><span className="font-semibold text-slate-900">Cognitive Load:</span> Review procedural steps to reduce mental demand during tool changes.</li>
+               </ul>
             </div>
           </div>
         </main>

@@ -24,6 +24,7 @@ interface LiveDashboardViewProps {
   endSession: () => void;
   liveMode: "biofeedback" | "camera" | "minimal";
   setLiveMode: React.Dispatch<React.SetStateAction<"biofeedback" | "camera" | "minimal">>;
+  hrvSensorReady?: boolean;
 }
 
 export default function LiveDashboardView({
@@ -37,7 +38,8 @@ export default function LiveDashboardView({
   setIsSessionPaused,
   endSession,
   liveMode,
-  setLiveMode
+  setLiveMode,
+  hrvSensorReady
 }: LiveDashboardViewProps) {
   // ── Derived live values ──────────────────────────────────────
   const sessionDurationSec = sessionData.length;
@@ -114,6 +116,11 @@ export default function LiveDashboardView({
         <div className="flex items-center gap-3">
           <span className="live-dot" />
           <span className="text-slate-800 text-sm font-semibold tracking-widest uppercase select-none">Live Session</span>
+          {hrvSensorReady && (
+            <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-emerald-50 text-emerald-600 border border-emerald-200">
+              HRV
+            </span>
+          )}
           {isSessionPaused && (
             <span className="ml-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase" style={{ background: "rgba(251,191,36,0.15)", color: "#d97706", border: "1px solid rgba(251,191,36,0.3)" }}>Paused</span>
           )}
@@ -208,7 +215,7 @@ export default function LiveDashboardView({
                 <div className="flex flex-col mt-auto items-center justify-center flex-1 w-full gap-2">
                     <div className="flex items-baseline gap-1">
                       <span className="font-mono text-5xl font-light text-primary">
-                        {currentRmssd !== null ? currentRmssd.toFixed(1) : "--"}
+                        {currentRmssd !== null && currentRmssd > 0 ? currentRmssd.toFixed(1) : "--"}
                       </span>
                       <span className="text-slate-500 font-medium text-lg">ms</span>
                     </div>
@@ -294,8 +301,8 @@ export default function LiveDashboardView({
                     </div>
                     <div className="px-3 py-1.5 rounded-full border border-slate-200 mt-1 bg-slate-50">
                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${bpm && bpm > 100 ? "bg-red-500 animate-pulse" : "bg-emerald-500"}`} />
-                          <span className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider">Status: {bpm && bpm > 100 ? "Elevated" : "Normal"}</span>
+                          <div className={`w-2 h-2 rounded-full ${!bpm || bpm === 0 ? "bg-amber-400 animate-pulse" : (bpm > 100 ? "bg-red-500 animate-pulse" : "bg-emerald-500")}`} />
+                          <span className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider">Status: {!bpm || bpm === 0 ? "No Signal / Disconnected" : (bpm > 100 ? "Elevated" : "Normal")}</span>
                        </div>
                     </div>
                 </div>
@@ -307,7 +314,7 @@ export default function LiveDashboardView({
                 </p>
                 <div className="flex flex-col mt-auto items-center justify-center flex-1 w-full gap-3">
                     <div className="flex items-baseline gap-1">
-                      <span className="font-mono text-5xl font-light text-[#3b579f]">{perfScore}</span>
+                      <span className="font-mono text-5xl font-light text-slate-600">{perfScore}</span>
                       <span className="text-slate-500 font-medium text-lg">pts</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -318,12 +325,12 @@ export default function LiveDashboardView({
             </div>
           </div>
 
-          <div className="glass-card p-4 md:p-6 flex flex-col gap-2 w-full h-[220px] lg:h-[260px] shrink-0 mt-2">
+          <div className="glass-card p-4 md:p-6 flex flex-col gap-2 w-full h-55 lg:h-65 shrink-0 mt-2">
             <div className="flex items-center justify-between">
               <p className="metric-label tracking-widest uppercase">Live Session Timeline</p>
               <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" /><span className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Stress Δ (%)</span></div>
-                  <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-[#3b579f]" /><span className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Cognitive Load</span></div>
+                  <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-slate-600" /><span className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Cognitive Load</span></div>
               </div>
             </div>
             <div className="flex-1 w-full min-h-0 mt-4">

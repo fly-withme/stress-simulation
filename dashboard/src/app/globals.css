@@ -79,49 +79,48 @@
       /* 1 – primary specular hotspot */
       radial-gradient(
         ellipse 18% 11% at 33% 26%,
-        rgba(255,255,255,0.94) 0%,
+        rgba(255,255,255,0.95) 0%,
+        rgba(255,255,255,0.5) 40%,
         rgba(255,255,255,0.00) 100%
       ),
       /* 2 – soft secondary glint */
       radial-gradient(
         ellipse 38% 24% at 26% 36%,
-        rgba(210,232,255,0.52) 0%,
+        rgba(210,232,255,0.6) 0%,
         rgba(210,232,255,0.00) 100%
       ),
       /* 3 – rim / back-light crescent (bottom-right) */
       radial-gradient(
         ellipse 55% 55% at 80% 82%,
-        rgba(90,140,220,0.30) 0%,
-        rgba(90,140,220,0.00) 100%
+        rgba(150,190,250,0.60) 0%,
+        rgba(150,190,250,0.00) 100%
       ),
       /* 4 – mid-tone blue body */
       radial-gradient(
         ellipse 80% 75% at 44% 48%,
-        #4a72b8  0%,
-        #1a3580 55%,
+        #7fa8f0  0%,
+        #3b68c4 55%,
         transparent 100%
       ),
-      /* 5 – deep shadow, lower-right quadrant */
+      /* 5 – depth shadow, lower-right quadrant */
       radial-gradient(
         ellipse 70% 70% at 74% 76%,
-        #000c2e  0%,
+        #153075  0%,
         transparent 75%
       ),
       /* 6 – base sphere colour */
       radial-gradient(
         circle at 38% 36%,
-        #6a99d4  0%,
-        #2651a0 28%,
-        #0a237a 54%,
-        #000d32 100%
+        #a8cdfa  0%,
+        #5c8deb 28%,
+        #2a52b3 54%,
+        #0b2361 100%
       );
 
-    /* Glow aura */
+    /* Glow aura - simplified for lighter bg */
     box-shadow:
-      0   0  35px  8px rgba( 50,100,200,0.52),
-      0   0  80px 20px rgba( 30, 70,160,0.28),
-      0   0 140px 45px rgba( 20, 50,130,0.14),
-      inset 0 0 22px 6px rgba(  0, 10, 50,0.60);
+      0   10px 40px -10px rgba(50, 100, 200, 0.4),
+      inset -10px -10px 30px rgba(11, 35, 97, 0.4);
 
     transition: box-shadow 0.7s ease;
   }

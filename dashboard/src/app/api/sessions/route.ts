@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { writeFile, mkdir, readdir, readFile, stat } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
+import * as xlsx from 'xlsx';
 
 export async function POST(request: Request) {
   try {
