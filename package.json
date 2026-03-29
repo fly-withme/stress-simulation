@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "sheetjs-style": "^0.15.8",
+    "xlsx": "^0.18.5"
+  }
+}

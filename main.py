@@ -154,8 +154,17 @@ def process_ecg_chunk(times, values):
         if len(values) < 20:
             return
             
-        y = np.array(values)
-        t = np.array(times)
+        y_raw = np.array(values)
+        t_raw = np.array(times)
+        
+        # Simple smoothing (moving average) to reduce high frequency noise
+        window_size = 5
+        if len(y_raw) >= window_size:
+            y = np.convolve(y_raw, np.ones(window_size)/window_size, mode='valid')
+            t = t_raw[(window_size-1)//2 : -(window_size//2)]
+        else:
+            y = y_raw
+            t = t_raw
         
         # Simple derivative and squaring for emphasis on R-peaks
         dy = np.diff(y)
@@ -163,7 +172,7 @@ def process_ecg_chunk(times, values):
         sq = dy ** 2
         
         # Peak Detektion: distance ist die Mindestanzahl an Samples zwischen zwei Peaks.
-        # Bei 150 Hz bedeuten 45 Samples = 300 ms (was max. 200 BPM entspricht).
+        # Bei ~134 Hz bedeuten 60 Samples = 450 ms (was max. 133 BPM entspricht).
         # Wir müssen auch überprüfen, ob das Signal nur "Rauschen" ist (Sensor nicht am Körper).
         # Liegt die Signalvarianz extrem niedrig, sind wir disconnected.
         is_disconnected = np.max(sq) < 0.5 or np.std(sq) < 0.2
@@ -174,17 +183,19 @@ def process_ecg_chunk(times, values):
             current_rmssd = 0.0
             return
 
-        base_threshold = np.mean(sq) + 1.5 * np.std(sq)
-        threshold = max(base_threshold, 1.0) # Assume some min amplitude for a real peak
+        # Etwas höheres Thresholding um Rauschen auszufiltern
+        base_threshold = np.mean(sq) + 2.5 * np.std(sq)
+        threshold = max(base_threshold, 2.0) # Assume some min amplitude for a real peak
         
-        peaks, _ = scipy.signal.find_peaks(sq, height=threshold, distance=45)
+        # Distance von 45 auf 60 erhöht, um falsche Peaks durch Jitter zu reduzieren
+        peaks, _ = scipy.signal.find_peaks(sq, height=threshold, distance=60)
         
         if len(peaks) > 0:
             logger.info(f"Detected {len(peaks)} peaks in chunk. sq mean: {np.mean(sq):.2f}, threshold: {threshold:.2f}")
 
         rr_intervals_ms = []
         for p in peaks:
-            # 1. R-R Sub-Sample Interpolation (entschärft den Jitter des 8Hz Signals für konsistente RMSSD-Ergebnisse)
+            # 1. R-R Sub-Sample Interpolation
             if 0 < p < len(sq) - 1:
                 y1, y2, y3 = sq[p-1], sq[p], sq[p+1]
                 t1, t2, t3 = t[p-1], t[p], t[p+1]

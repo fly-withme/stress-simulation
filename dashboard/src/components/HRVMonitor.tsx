@@ -24,7 +24,7 @@ const HRVMonitor: React.FC<HRVMonitorProps> = ({ rmssd, baseline }) => {
       ? "text-red-400" 
       : isRelaxed 
         ? "text-primary" 
-        : "text-primary";
+        : "text-primarletsy";
         
   const glowShadow = !hasData 
     ? "drop-shadow-md" 

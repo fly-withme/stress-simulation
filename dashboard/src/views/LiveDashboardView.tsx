@@ -332,7 +332,9 @@ export default function LiveDashboardView({
                   <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" /><span className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Stress Δ (%)</span></div>
                   <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-slate-600" /><span className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Cognitive Load</span></div>
               </div>
+
             </div>
+
             <div className="flex-1 w-full min-h-0 mt-4">
               {liveChartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
